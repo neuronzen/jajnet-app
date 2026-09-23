@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "862012070477",
+    "project_id": "jaj-net",
+    "storage_bucket": "jaj-net.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:862012070477:android:0e4371fba2020c24a51a04",
+        "android_client_info": {
+          "package_name": "com.jajnet.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBWB7iVZ9zmEXBn98Hqy2LCbCAd_rK3L8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
