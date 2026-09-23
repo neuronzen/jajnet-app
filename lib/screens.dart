@@ -293,8 +293,8 @@ class _SignupScreenState extends State<SignupScreen> {
                 prefixIcon: Icon(Icons.wifi_outlined),
               ),
               items: AppInfo.packages
-                  .map((p) => DropdownMenuItem(
-                        value: p['speed'],
+                  .map((p) => DropdownMenuItem<String>(
+                        value: p['speed'].toString(),
                         child: Text(
                             '${p['speed']} — ৳${p['price']}'),
                       ))
