@@ -1,1 +1,51 @@
+name: Build JAJ Net APK
 
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Create Flutter project
+        run: flutter create --org com.jajnet --project-name customer --platforms android .
+
+      - name: Copy google-services.json
+        run: cp google-services.json android/app/google-services.json
+
+      - name: Add google-services plugin
+        run: |
+          cd android
+          sed -i '/id "org.jetbrains.kotlin.android" version/i\    id "com.google.gms.google-services" version "4.4.0" apply false' settings.gradle
+          cd app
+          sed -i '/id "dev.flutter.flutter-gradle-plugin"/a\    id "com.google.gms.google-services"' build.gradle
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: jajnet-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
