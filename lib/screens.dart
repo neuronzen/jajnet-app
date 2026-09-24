@@ -872,6 +872,17 @@ class BillsTab extends StatelessWidget {
                                     style: const TextStyle(
                                         fontSize: 12,
                                         color: JajColors.textLight)),
+if (status == 'rejected' && (m['rejectedReason'] ?? '').toString().isNotEmpty)
+  Padding(
+    padding: const EdgeInsets.only(top: 3),
+    child: Text(
+      'কারণ: ${m['rejectedReason']}',
+      style: const TextStyle(
+        fontSize: 11,
+        color: JajColors.error,
+      ),
+    ),
+  ),
                               ],
                             ),
                           ),

@@ -610,6 +610,16 @@ children: [
                                         fontSize: 11.5,
                                         color: JC.grey,
                                         height: 1.5)),
+                            if (s == 'rejected' && (p['rejectedReason'] ?? '').toString().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 3),
+                                child: Text(
+                                    'কারণ: ${p['rejectedReason']}',
+                                    style: GoogleFonts.hindSiliguri(
+                                        fontSize: 11,
+                                        color: JC.error,
+                                        height: 1.4)),
+                              ),
                           ],
                         ),
                       ),
@@ -707,6 +717,17 @@ return GestureDetector(
                       fontSize: 11.5,
                       color: JC.grey,
                       height: 1.5)),
+if (s == 'rejected' && (p['rejectedReason'] ?? '').toString().isNotEmpty)
+  Padding(
+    padding: const EdgeInsets.only(top: 3),
+    child: Text(
+      'কারণ: ${p['rejectedReason']}',
+      style: GoogleFonts.hindSiliguri(
+        fontSize: 11,
+        color: JC.error,
+        height: 1.4),
+    ),
+  ),
             ],
           ),
         ),
