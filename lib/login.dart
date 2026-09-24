@@ -141,58 +141,212 @@ child: Column(
                 loading: _loading,
                 onTap: _login,
               ),
-
               const SizedBox(height: 22),
-
               Center(
-
                 child: Container(
-
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-
                   decoration: BoxDecoration(
-
                     color: JC.cream,
-
                     borderRadius: BorderRadius.circular(12),
-
                     border: Border.all(color: JC.creamDeep, width: 1.5),
-
                   ),
-
                   child: Row(
-
                     mainAxisSize: MainAxisSize.min,
-
                     children: [
-
-                      const Icon(Icons.info_outline_rounded, color: JC.primary, size: 18),
-
+                      const Icon(Icons.info_outline_rounded,
+                          color: JC.primary, size: 18),
                       const SizedBox(width: 8),
-
                       Flexible(
-
                         child: Text(
-
                           'নতুন সংযোগ বা পাসওয়ার্ডের জন্য সাপোর্টে যোগাযোগ করুন',
-
-                          style: GoogleFonts.hindSiliguri(fontSize: 12.5, color: JC.ink, height: 1.5),
-
+                          style: GoogleFonts.hindSiliguri(
+                              fontSize: 12.5, color: JC.ink, height: 1.5),
                         ),
-
                       ),
-
                     ],
-
                   ),
-
                 ),
-
               ),
               const SizedBox(height: 24),
-              _divider(),
-              
- {
+              Center(
+                child: Text(
+                  'সংস্করণ ১.০.০',
+                  style: GoogleFonts.hindSiliguri(
+                    fontSize: 11,
+                    color: JC.greyLight,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  ],
+),
+        ),
+      ),
+    );
+  }
+
+  Widget _headerBrand() {
+    return Column(
+      children: [
+        Container(
+width: 78,
+height: 78,
+decoration: BoxDecoration(
+  color: Colors.white,
+  borderRadius: BorderRadius.circular(24),
+  boxShadow: [
+    BoxShadow(
+      color: Colors.black.withOpacity(0.18),
+      blurRadius: 24,
+      offset: const Offset(0, 12),
+    ),
+  ],
+),
+child: const Icon(Icons.wifi_rounded,
+    size: 42, color: JC.primary),
+        ),
+        const SizedBox(height: 14),
+        Text(
+'JAJ Net',
+style: GoogleFonts.poppins(
+  fontSize: 26,
+  fontWeight: FontWeight.w700,
+  color: Colors.white,
+  letterSpacing: 1.4,
+),
+        ),
+        const SizedBox(height: 4),
+        Text(
+'তৈরি হোক নিরবিচ্ছিন্ন সম্পর্ক',
+style: GoogleFonts.hindSiliguri(
+  fontSize: 13,
+  color: Colors.white.withOpacity(0.94),
+),
+        ),
+      ],
+    );
+  }
+
+  Widget _field({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboard,
+    bool obscure = false,
+    Widget? suffix,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboard,
+      obscureText: obscure,
+      style: GoogleFonts.hindSiliguri(fontSize: 15, color: JC.ink),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: JC.primary, size: 20),
+        suffixIcon: suffix,
+        labelStyle: GoogleFonts.hindSiliguri(
+  fontSize: 14, color: JC.grey),
+        floatingLabelStyle: GoogleFonts.hindSiliguri(
+color: JC.primary,
+fontWeight: FontWeight.w500,
+        ),
+        filled: true,
+        fillColor: JC.cream,
+        border: OutlineInputBorder(
+borderRadius: BorderRadius.circular(18),
+borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+borderRadius: BorderRadius.circular(18),
+borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+borderRadius: BorderRadius.circular(18),
+borderSide:
+    const BorderSide(color: JC.primary, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+  vertical: 20, horizontal: 16),
+      ),
+    );
+  }
+
+  Widget _primaryButton({
+    required bool loading,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: loading ? null : onTap,
+      child: Container(
+        height: 58,
+        decoration: BoxDecoration(
+gradient: JC.heroGradient,
+borderRadius: BorderRadius.circular(20),
+boxShadow: [
+  BoxShadow(
+    color: JC.primary.withOpacity(0.4),
+    blurRadius: 22,
+    offset: const Offset(0, 12),
+  ),
+],
+        ),
+        child: Center(
+child: loading
+    ? const SizedBox(
+        width: 22,
+        height: 22,
+        child: CircularProgressIndicator(
+          color: Colors.white,
+          strokeWidth: 2.5,
+        ),
+      )
+    : Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'লগইন করুন',
+            style: GoogleFonts.hindSiliguri(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.arrow_forward_rounded,
+              color: Colors.white, size: 20),
+        ],
+      ),
+        ),
+      ),
+    );
+  }
+
+  Widget _divider() {
+    return Row(
+      children: [
+        Expanded(child: Container(height: 1, color: JC.greyLight)),
+        Padding(
+padding: const EdgeInsets.symmetric(horizontal: 12),
+child: Text(
+  'অথবা',
+  style: GoogleFonts.hindSiliguri(
+      fontSize: 12, color: JC.grey),
+),
+        ),
+        Expanded(child: Container(height: 1, color: JC.greyLight)),
+      ],
+    );
+  }
+
+  Widget _ghostButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
