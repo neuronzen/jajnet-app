@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'screens.dart';
 import 'services.dart';
@@ -18,7 +19,18 @@ class _LoginScreenNewState extends State<LoginScreenNew> {
   bool _hide = true;
 
   Future<void> _login() async {
-    if (_email.text.isEmpty || _pass.text.isEmpty) return;
+    if (_email.text.isEmpty || _pass.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'ইমেইল ও পাসওয়ার্ড দিন',
+            style: GoogleFonts.hindSiliguri(height: 1.5),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     setState(() => _loading = true);
     try {
       await AuthService.signIn(_email.text.trim(), _pass.text);
@@ -29,11 +41,24 @@ class _LoginScreenNewState extends State<LoginScreenNew> {
       );
     } catch (e) {
       if (!mounted) return;
+      String msg = 'লগইন করা যায়নি';
+      final s = e.toString();
+      if (s.contains('user-not-found')) {
+        msg = 'এই ইমেইলে কোনো অ্যাকাউন্ট নেই';
+      } else if (s.contains('wrong-password') ||
+          s.contains('invalid-credential')) {
+        msg = 'ইমেইল বা পাসওয়ার্ড ভুল';
+      } else if (s.contains('invalid-email')) {
+        msg = 'ইমেইল ঠিকানাটি সঠিক নয়';
+      } else if (s.contains('network')) {
+        msg = 'ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না';
+      } else if (s.contains('too-many-requests')) {
+        msg = 'অনেকবার চেষ্টা করা হয়েছে, পরে আবার চেষ্টা করুন';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-content: Text(
-    e.toString().replaceAll('firebase_auth', 'লগইন')),
-behavior: SnackBarBehavior.floating,
+          content: Text(msg, style: GoogleFonts.hindSiliguri(height: 1.5)),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
@@ -44,190 +69,132 @@ behavior: SnackBarBehavior.floating,
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: JC.heroGradient),
-        child: SafeArea(
-bottom: false,
-child: Column(
-  children: [
-    SizedBox(
-      height: 40,
-      width: double.infinity,
-    ),
-    _headerBrand(),
-    const SizedBox(height: 28),
-    Expanded(
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: JC.white,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(38),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.14),
-              blurRadius: 30,
-              offset: const Offset(0, -10),
-            ),
-          ],
-        ),
-        child: SingleChildScrollView(
-          padding:
-              const EdgeInsets.fromLTRB(28, 32, 28, 28),
-          child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'স্বাগতম 👋',
-                style: GoogleFonts.hindSiliguri(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: JC.ink,
-                  height: 1.2,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'আপনার JAJ Net অ্যাকাউন্টে লগইন করুন',
-                style: GoogleFonts.hindSiliguri(
-                  fontSize: 14,
-                  color: JC.grey,
-                ),
-              ),
-              const SizedBox(height: 28),
-              _field(
-                controller: _email,
-                label: 'ইমেইল',
-                icon: Icons.alternate_email_rounded,
-                keyboard: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 14),
-              _field(
-                controller: _pass,
-                label: 'পাসওয়ার্ড',
-                icon: Icons.lock_outline_rounded,
-                obscure: _hide,
-                suffix: IconButton(
-                  icon: Icon(
-                    _hide
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    color: JC.grey,
-                    size: 20,
-                  ),
-                  onPressed: () =>
-                      setState(() => _hide = !_hide),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {},
-                  child: Text(
-                    'পাসওয়ার্ড ভুলে গেছেন?',
-                    style: GoogleFonts.hindSiliguri(
-                      fontSize: 13,
-                      color: JC.primary,
-                      fontWeight: FontWeight.w500,
+      backgroundColor: JC.white,
+      body: Column(
+        children: [
+          // Top orange header
+          Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(gradient: JC.heroGradient),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 30, 24, 60),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 22,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.wifi_rounded,
+                        size: 38,
+                        color: JC.primary,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'JAJ Net',
+                      style: GoogleFonts.poppins(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'তৈরি হোক নিরবিচ্ছিন্ন সম্পর্ক',
+                      style: GoogleFonts.hindSiliguri(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.94),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              _primaryButton(
-                loading: _loading,
-                onTap: _login,
-              ),
-              const SizedBox(height: 22),
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: JC.cream,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: JC.creamDeep, width: 1.5),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+            ),
+          ),
+          // White body
+          Expanded(
+            child: Transform.translate(
+              offset: const Offset(0, -30),
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: JC.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(26, 30, 26, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.info_outline_rounded,
-                          color: JC.primary, size: 18),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          'নতুন সংযোগ বা পাসওয়ার্ডের জন্য সাপোর্টে যোগাযোগ করুন',
-                          style: GoogleFonts.hindSiliguri(
-                              fontSize: 12.5, color: JC.ink, height: 1.5),
+                      Text(
+                        'স্বাগতম 👋',
+                        style: GoogleFonts.hindSiliguri(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w700,
+                          color: JC.ink,
+                          height: 1.5,
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'আপনার JAJ Net অ্যাকাউন্টে লগইন করুন',
+                        style: GoogleFonts.hindSiliguri(
+                          fontSize: 13.5,
+                          color: JC.grey,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 26),
+                      _field(
+                        controller: _email,
+                        label: 'ইমেইল',
+                        icon: Icons.alternate_email_rounded,
+                        keyboard: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 14),
+                      _field(
+                        controller: _pass,
+                        label: 'পাসওয়ার্ড',
+                        icon: Icons.lock_outline_rounded,
+                        obscure: _hide,
+                        suffix: IconButton(
+                          icon: Icon(
+                            _hide
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: JC.grey,
+                            size: 20,
+                          ),
+                          onPressed: () => setState(() => _hide = !_hide),
+                        ),
+                      ),
+                      const SizedBox(height: 26),
+                      _loginButton(),
+                      const SizedBox(height: 24),
+                      _footer(),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              Center(
-                child: Text(
-                  'সংস্করণ ১.০.০',
-                  style: GoogleFonts.hindSiliguri(
-                    fontSize: 11,
-                    color: JC.greyLight,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
-    ),
-  ],
-),
-        ),
-      ),
-    );
-  }
-
-  Widget _headerBrand() {
-    return Column(
-      children: [
-        Container(
-width: 78,
-height: 78,
-decoration: BoxDecoration(
-  color: Colors.white,
-  borderRadius: BorderRadius.circular(24),
-  boxShadow: [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.18),
-      blurRadius: 24,
-      offset: const Offset(0, 12),
-    ),
-  ],
-),
-child: const Icon(Icons.wifi_rounded,
-    size: 42, color: JC.primary),
-        ),
-        const SizedBox(height: 14),
-        Text(
-'JAJ Net',
-style: GoogleFonts.poppins(
-  fontSize: 26,
-  fontWeight: FontWeight.w700,
-  color: Colors.white,
-  letterSpacing: 1.4,
-),
-        ),
-        const SizedBox(height: 4),
-        Text(
-'তৈরি হোক নিরবিচ্ছিন্ন সম্পর্ক',
-style: GoogleFonts.hindSiliguri(
-  fontSize: 13,
-  color: Colors.white.withOpacity(0.94),
-),
-        ),
-      ],
     );
   }
 
@@ -248,130 +215,125 @@ style: GoogleFonts.hindSiliguri(
         labelText: label,
         prefixIcon: Icon(icon, color: JC.primary, size: 20),
         suffixIcon: suffix,
-        labelStyle: GoogleFonts.hindSiliguri(
-  fontSize: 14, color: JC.grey),
+        labelStyle: GoogleFonts.hindSiliguri(fontSize: 14, color: JC.grey),
         floatingLabelStyle: GoogleFonts.hindSiliguri(
-color: JC.primary,
-fontWeight: FontWeight.w500,
+          color: JC.primary,
+          fontWeight: FontWeight.w500,
         ),
         filled: true,
         fillColor: JC.cream,
         border: OutlineInputBorder(
-borderRadius: BorderRadius.circular(18),
-borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-borderRadius: BorderRadius.circular(18),
-borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-borderRadius: BorderRadius.circular(18),
-borderSide:
-    const BorderSide(color: JC.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: JC.primary, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(
-  vertical: 20, horizontal: 16),
+        contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       ),
     );
   }
 
-  Widget _primaryButton({
-    required bool loading,
-    required VoidCallback onTap,
-  }) {
+  Widget _loginButton() {
     return GestureDetector(
-      onTap: loading ? null : onTap,
+      onTap: _loading ? null : _login,
       child: Container(
-        height: 58,
+        height: 56,
         decoration: BoxDecoration(
-gradient: JC.heroGradient,
-borderRadius: BorderRadius.circular(20),
-boxShadow: [
-  BoxShadow(
-    color: JC.primary.withOpacity(0.4),
-    blurRadius: 22,
-    offset: const Offset(0, 12),
-  ),
-],
+          gradient: JC.heroGradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: JC.primary.withOpacity(0.35),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Center(
-child: loading
-    ? const SizedBox(
-        width: 22,
-        height: 22,
-        child: CircularProgressIndicator(
-          color: Colors.white,
-          strokeWidth: 2.5,
+          child: _loading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'লগইন করুন',
+                      style: GoogleFonts.hindSiliguri(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ],
+                ),
         ),
-      )
-    : Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'লগইন করুন',
+      ),
+    );
+  }
+
+  Widget _footer() {
+    return Column(
+      children: [
+        const SizedBox(height: 6),
+        Center(
+          child: Text(
+            'নতুন সংযোগের জন্য কল করুন',
             style: GoogleFonts.hindSiliguri(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
+              fontSize: 13,
+              color: JC.grey,
+              height: 1.5,
             ),
           ),
-          const SizedBox(width: 8),
-          const Icon(Icons.arrow_forward_rounded,
-              color: Colors.white, size: 20),
-        ],
-      ),
         ),
-      ),
-    );
-  }
-
-  Widget _divider() {
-    return Row(
-      children: [
-        Expanded(child: Container(height: 1, color: JC.greyLight)),
-        Padding(
-padding: const EdgeInsets.symmetric(horizontal: 12),
-child: Text(
-  'অথবা',
-  style: GoogleFonts.hindSiliguri(
-      fontSize: 12, color: JC.grey),
-),
+        const SizedBox(height: 6),
+        Center(
+          child: GestureDetector(
+            onTap: () async {
+              final uri = Uri.parse('tel:${AppInfo.helpline}');
+              if (await canLaunchUrl(uri)) launchUrl(uri);
+            },
+            child: Text(
+              AppInfo.helpline,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: JC.primary,
+                height: 1.5,
+              ),
+            ),
+          ),
         ),
-        Expanded(child: Container(height: 1, color: JC.greyLight)),
+        const SizedBox(height: 22),
+        Center(
+          child: Text(
+            'সংস্করণ ১.০.০',
+            style: GoogleFonts.hindSiliguri(
+              fontSize: 10.5,
+              color: JC.greyLight,
+              height: 1.5,
+            ),
+          ),
+        ),
       ],
-    );
-  }
-
-  Widget _ghostButton({
-    required String label,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 54,
-        decoration: BoxDecoration(
-borderRadius: BorderRadius.circular(18),
-border: Border.all(
-    color: JC.primary.withOpacity(0.4), width: 1.5),
-        ),
-        child: Row(
-mainAxisAlignment: MainAxisAlignment.center,
-children: [
-  Icon(icon, color: JC.primary, size: 20),
-  const SizedBox(width: 10),
-  Text(
-    label,
-    style: GoogleFonts.hindSiliguri(
-      fontSize: 15,
-      fontWeight: FontWeight.w600,
-      color: JC.primary,
-    ),
-  ),
-],
-        ),
-      ),
     );
   }
 }
