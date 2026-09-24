@@ -1,0 +1,56 @@
+name: Fix Constructor Name
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fix _OldPaymentScreen constructor
+        run: |
+          python3 << 'ENDPY'
+          with open('lib/screens.dart') as f:
+              c = f.read()
+
+          # Fix constructor name in _OldPaymentScreen class
+          c = c.replace(
+              "const PaymentScreen({super.key});",
+              "const _OldPaymentScreen({super.key});",
+          )
+
+          # Fix any State<PaymentScreen> references
+          c = c.replace(
+              "State<PaymentScreen>",
+              "State<_OldPaymentScreen>",
+          )
+          c = c.replace(
+              "State<PaymentScreen>",
+              "State<_OldPaymentScreen>",
+          )
+
+          with open('lib/screens.dart', 'w') as f:
+              f.write(c)
+          print("Constructor fixed")
+          ENDPY
+
+      - name: Verify
+        run: |
+          echo "=== PaymentScreen references in screens.dart ==="
+          grep -n "PaymentScreen" lib/screens.dart | head -20
+          echo ""
+          echo "=== _OldPaymentScreen lines ==="
+          grep -n "_OldPaymentScreen" lib/screens.dart | head -10
+
+      - name: Commit
+        run: |
+          git config user.name "JAJ Net Bot"
+          git config user.email "bot@jajnet.local"
+          git add lib/
+          git commit -m "Fix constructor name in _OldPaymentScreen" || echo "no change"
+          git push
