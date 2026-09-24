@@ -17,6 +17,8 @@ class AuthService {
     required String email,
     required String password,
     required String address,
+    required String packageName,
+    required int packagePrice,
   }) async {
     final cred = await _auth.createUserWithEmailAndPassword(
       email: email,
@@ -27,10 +29,10 @@ class AuthService {
       'phone': phone,
       'email': email,
       'address': address,
-      'package': '20 Mbps',
-      'packagePrice': 500,
+      'package': packageName,
+      'packagePrice': packagePrice,
       'status': 'active',
-      'dueAmount': 500,
+      'dueAmount': packagePrice,
       'createdAt': FieldValue.serverTimestamp(),
     });
     return cred;
@@ -95,4 +97,35 @@ class AppInfo {
   {'name': 'Elite', 'speed': '40 Mbps', 'price': 750},
   {'name': 'Premium', 'speed': '50 Mbps', 'price': 850},
 ];
+
+  static Stream<QuerySnapshot> get packagesStream {
+    return FirebaseFirestore.instance
+        .collection('packages')
+        .where('isActive', isEqualTo: true)
+        .orderBy('order')
+        .snapshots();
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchPackages() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('packages')
+          .where('isActive', isEqualTo: true)
+          .get();
+      final list = snap.docs.map((d) {
+        final m = d.data();
+        return <String, dynamic>{
+          'id': d.id,
+          'name': (m['name'] ?? '').toString(),
+          'price': (m['price'] ?? 0) as int,
+          'order': (m['order'] ?? 0) as int,
+        };
+      }).toList();
+      list.sort((a, b) => (a['order'] as int).compareTo(b['order'] as int));
+      return list;
+    } catch (e) {
+      return [];
+    }
+  }
+
 }

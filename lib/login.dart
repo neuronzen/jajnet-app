@@ -371,12 +371,32 @@ class SignupScreenNew extends StatefulWidget {
 }
 
 class _SignupScreenNewState extends State<SignupScreenNew> {
+  @override
+  void initState() {
+    super.initState();
+    _loadPkgs();
+  }
+
+  Future<void> _loadPkgs() async {
+    final pkgs = await AuthService.fetchPackages();
+    if (!mounted) return;
+    setState(() {
+      _packages = pkgs;
+      if (_packages.isNotEmpty) {
+        _pkg = (_packages.first['name'] ?? '').toString();
+      }
+      _loadingPkgs = false;
+    });
+  }
+
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
   final _pass = TextEditingController();
   String _area = AppInfo.areas.first;
-  String _pkg = AppInfo.packages.first['speed'];
+  String _pkg = '';
+  List<Map<String, dynamic>> _packages = [];
+  bool _loadingPkgs = true;
   bool _loading = false;
   bool _hide = true;
 
@@ -386,12 +406,18 @@ class _SignupScreenNewState extends State<SignupScreenNew> {
         _pass.text.isEmpty) return;
     setState(() => _loading = true);
     try {
+      final selectedPkg = _packages.firstWhere(
+        (p) => (p['name'] ?? '').toString() == _pkg,
+        orElse: () => _packages.isNotEmpty ? _packages.first : {},
+      );
       await AuthService.signUp(
         name: _name.text.trim(),
         phone: _phone.text.trim(),
         email: _email.text.trim(),
         password: _pass.text,
         address: _area,
+        packageName: (selectedPkg['name'] ?? '20 Mbps').toString(),
+        packagePrice: (selectedPkg['price'] ?? 525) as int,
       );
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -496,16 +522,7 @@ children: [
     value: _pkg,
     label: 'প্যাকেজ',
     icon: Icons.wifi_outlined,
-    items: AppInfo.packages
-        .map((p) => DropdownMenuItem<String>(
-              value: p['speed'].toString(),
-              child: Text(
-                '${p['speed']} — ৳${p['price']}',
-                style: GoogleFonts.hindSiliguri(
-                    fontSize: 14),
-              ),
-            ))
-        .toList(),
+    items: _packages.map((p) => DropdownMenuItem<String>(value: (p['name'] ?? '').toString(), child: Text('${p['name']} — ৳${p['price']}', style: GoogleFonts.hindSiliguri(fontSize: 14)))).toList(),
     onChanged: (v) => setState(() => _pkg = v!),
   ),
   const SizedBox(height: 32),
