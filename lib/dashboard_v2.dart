@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'invoice.dart';
+import 'charges_screen.dart';
 import 'notice_detail.dart';
 import 'payment_screen.dart';
 import 'screens.dart';
@@ -407,8 +408,8 @@ height: 1.5));
 page: const PaymentScreen()),
       _QA('প্যাকেজ', Icons.wifi_rounded,
 page: const PackagesScreen()),
-      _QA('ইনভয়েস', Icons.receipt_long_rounded,
-onTap: () => _showInvoiceSheet(context)),
+      _QA('বিল রেকর্ড', Icons.receipt_long_rounded,
+          page: const ChargesScreen()),
       _QA('স্পিড টেস্ট', Icons.speed_rounded,
 onTap: () => _showSpeedTest(context)),
     ];
