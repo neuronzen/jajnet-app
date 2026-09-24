@@ -219,6 +219,8 @@ class _SignupScreenState extends State<SignupScreen> {
         email: _email.text.trim(),
         password: _pass.text,
         address: _area,
+        packageName: '20 Mbps',
+        packagePrice: 525,
       );
       if (!mounted) return;
       Navigator.pushReplacement(context,

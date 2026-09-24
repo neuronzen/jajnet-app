@@ -17,8 +17,8 @@ class AuthService {
     required String email,
     required String password,
     required String address,
-    required String packageName,
-    required int packagePrice,
+    String packageName = '20 Mbps',
+    int packagePrice = 525,
   }) async {
     final cred = await _auth.createUserWithEmailAndPassword(
       email: email,
@@ -75,6 +75,28 @@ class AuthService {
   static Stream<QuerySnapshot> notices() {
     return _db.collection('notices').snapshots();
   }
+
+  static Future<List<Map<String, dynamic>>> fetchPackages() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('packages')
+          .where('isActive', isEqualTo: true)
+          .get();
+      final list = snap.docs.map((d) {
+        final m = d.data();
+        return <String, dynamic>{
+          'id': d.id,
+          'name': (m['name'] ?? '').toString(),
+          'price': (m['price'] ?? 0) as int,
+          'order': (m['order'] ?? 0) as int,
+        };
+      }).toList();
+      list.sort((a, b) => (a['order'] as int).compareTo(b['order'] as int));
+      return list;
+    } catch (e) {
+      return [];
+    }
+  }
 }
 
 class AppInfo {
@@ -106,26 +128,5 @@ class AppInfo {
         .snapshots();
   }
 
-  static Future<List<Map<String, dynamic>>> fetchPackages() async {
-    try {
-      final snap = await FirebaseFirestore.instance
-          .collection('packages')
-          .where('isActive', isEqualTo: true)
-          .get();
-      final list = snap.docs.map((d) {
-        final m = d.data();
-        return <String, dynamic>{
-          'id': d.id,
-          'name': (m['name'] ?? '').toString(),
-          'price': (m['price'] ?? 0) as int,
-          'order': (m['order'] ?? 0) as int,
-        };
-      }).toList();
-      list.sort((a, b) => (a['order'] as int).compareTo(b['order'] as int));
-      return list;
-    } catch (e) {
-      return [];
-    }
-  }
 
 }
