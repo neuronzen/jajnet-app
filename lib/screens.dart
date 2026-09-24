@@ -1,3 +1,4 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'services.dart';
 import 'dashboard_v2.dart';
+import 'notice_detail.dart';
 import 'theme.dart';
 
 // ==================== SPLASH ====================
