@@ -1,11 +1,13 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'theme.dart';
 
@@ -219,6 +221,17 @@ pw.Text(value,
       ),
     );
   }
+
+  static Future<void> saveAndShare(Uint8List bytes,
+      {String filename = 'JAJNet_Invoice.pdf'}) async {
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/$filename');
+    await file.writeAsBytes(bytes);
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      subject: 'JAJ Net Invoice',
+    );
+  }
 }
 
 class InvoicePreviewScreen extends StatelessWidget {
@@ -252,48 +265,148 @@ style: GoogleFonts.hindSiliguri(
 ),
         ),
       ),
-      body: FutureBuilder<Uint8List>(
-        future: InvoiceService.generate(
-customerName: (user['name'] ?? '').toString(),
-phone: (user['phone'] ?? '').toString(),
-address: (user['address'] ?? '').toString(),
-package: (user['package'] ?? '').toString(),
-months: months,
-monthlyPrice: monthlyPrice,
-total: (payment['amount'] ?? 0) as int,
-trxId: (payment['trxId'] ?? '').toString(),
-status: (payment['status'] ?? 'pending').toString(),
-date: (payment['createdAt'] is Timestamp)
-    ? (payment['createdAt'] as Timestamp).toDate()
-    : DateTime.now(),
-monthRange: monthRange,
-        ),
-        builder: (context, snap) {
-if (snap.connectionState != ConnectionState.done) {
-  return const Center(
-      child: CircularProgressIndicator(color: JC.primary));
-}
-if (snap.hasError) {
-  return Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Text('ইনভয়েস তৈরি করা যায়নি: ${snap.error}',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.hindSiliguri(height: 1.5)),
+      body: Center(
+        child: Padding(
+padding: const EdgeInsets.all(28),
+child: Column(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    Container(
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        gradient: JC.heroGradient,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: JC.primary.withOpacity(0.35),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.receipt_long_rounded,
+          color: Colors.white, size: 50),
     ),
-  );
-}
-final bytes = snap.data!;
-return PdfPreview(
-  build: (_) => bytes,
-  allowSharing: true,
-  allowPrinting: true,
-  canChangePageFormat: false,
-  canChangeOrientation: false,
-  canDebug: false,
-  pdfFileName: 'JAJNet_Invoice.pdf',
-);
+    const SizedBox(height: 28),
+    Text('ইনভয়েস তৈরি হয়েছে',
+        style: GoogleFonts.hindSiliguri(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: JC.ink,
+            height: 1.5)),
+    const SizedBox(height: 8),
+    Text(
+      'নিচের বাটনে ট্যাপ করে PDF ডাউনলোড বা শেয়ার করুন',
+      textAlign: TextAlign.center,
+      style: GoogleFonts.hindSiliguri(
+          fontSize: 14, color: JC.grey, height: 1.7),
+    ),
+    const SizedBox(height: 28),
+    Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: JC.cream,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          _infoRow('পরিমাণ', '৳${payment['amount'] ?? 0}'),
+          _infoRow('TrxID',
+              '${payment['trxId'] ?? "N/A"}'),
+          _infoRow(
+              'স্ট্যাটাস',
+              ((payment['status'] ?? "pending")
+                      .toString()
+                      .toUpperCase())),
+        ],
+      ),
+    ),
+    const SizedBox(height: 32),
+    SizedBox(
+      width: double.infinity,
+      height: 58,
+      child: ElevatedButton(
+        onPressed: () async {
+          final messenger =
+              ScaffoldMessenger.of(context);
+          try {
+            final bytes = await InvoiceService.generate(
+              customerName:
+                  (user['name'] ?? '').toString(),
+              phone: (user['phone'] ?? '').toString(),
+              address:
+                  (user['address'] ?? '').toString(),
+              package:
+                  (user['package'] ?? '').toString(),
+              months: months,
+              monthlyPrice: monthlyPrice,
+              total: (payment['amount'] ?? 0) as int,
+              trxId:
+                  (payment['trxId'] ?? '').toString(),
+              status:
+                  (payment['status'] ?? 'pending')
+                      .toString(),
+              date: (payment['createdAt'] is Timestamp)
+                  ? (payment['createdAt'] as Timestamp)
+                      .toDate()
+                  : DateTime.now(),
+              monthRange: monthRange,
+            );
+            await InvoiceService.saveAndShare(
+              bytes,
+              filename:
+                  'JAJNet_${payment['trxId'] ?? "Invoice"}.pdf',
+            );
+          } catch (e) {
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text('সমস্যা: $e',
+                    style: GoogleFonts.hindSiliguri(
+                        height: 1.5)),
+              ),
+            );
+          }
         },
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.share_rounded,
+                color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Text('PDF ডাউনলোড / শেয়ার করুন',
+                style: GoogleFonts.hindSiliguri(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    height: 1.5)),
+          ],
+        ),
+      ),
+    ),
+  ],
+),
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+Text(label,
+    style: GoogleFonts.hindSiliguri(
+        fontSize: 13, color: JC.grey, height: 1.5)),
+Text(value,
+    style: GoogleFonts.poppins(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: JC.ink,
+        height: 1.5)),
+        ],
       ),
     );
   }
