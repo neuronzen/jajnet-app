@@ -666,7 +666,7 @@ class PackagesScreen extends StatelessWidget {
 
 // ==================== PAYMENT ====================
 class _OldPaymentScreen extends StatefulWidget {
-  const PaymentScreen({super.key});
+  const _OldPaymentScreen({super.key});
   @override
   State<_OldPaymentScreen> createState() => _OldPaymentScreenState();
 }
