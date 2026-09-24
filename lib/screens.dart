@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'services.dart';
 import 'dashboard_v2.dart';
+import 'payment_screen.dart';
 import 'notice_detail.dart';
 import 'theme.dart';
 
@@ -664,13 +665,13 @@ class PackagesScreen extends StatelessWidget {
 }
 
 // ==================== PAYMENT ====================
-class PaymentScreen extends StatefulWidget {
+class _OldPaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
   @override
-  State<PaymentScreen> createState() => _PaymentScreenState();
+  State<_OldPaymentScreen> createState() => _OldPaymentScreenState();
 }
 
-class _PaymentScreenState extends State<PaymentScreen> {
+class _OldPaymentScreenState extends State<_OldPaymentScreen> {
   final _trx = TextEditingController();
   final _amount = TextEditingController(text: '500');
   bool _loading = false;
@@ -1043,7 +1044,7 @@ class ProfileTab extends StatelessWidget {
               _row(Icons.email, 'ইমেইল', d['email'] ?? '-'),
               const SizedBox(height: 20),
               SizedBox(
-                height: 52,
+                height: 60,
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     await AuthService.signOut();
