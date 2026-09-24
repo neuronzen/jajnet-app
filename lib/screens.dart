@@ -1,3 +1,4 @@
+import 'login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -26,7 +27,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => u == null ? const LoginScreen() : const MainShell(),
+        builder: (_) => u == null ? const LoginScreenNew() : const MainShell(),
       ),
     );
   }
@@ -1043,7 +1044,7 @@ class ProfileTab extends StatelessWidget {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const LoginScreen()),
+                          builder: (_) => const LoginScreenNew()),
                     );
                   },
                   icon: const Icon(Icons.logout, color: JajColors.error),

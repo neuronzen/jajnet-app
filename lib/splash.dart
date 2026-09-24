@@ -18,29 +18,34 @@ class SplashScreenNew extends StatefulWidget {
 class _SplashScreenNewState extends State<SplashScreenNew>
     with TickerProviderStateMixin {
   late final AnimationController _intro;
-  late final AnimationController _pulse;
+  late final AnimationController _halo;
   late final AnimationController _wave;
+  late final AnimationController _bgShift;
 
   @override
   void initState() {
     super.initState();
     _intro = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 2000),
     )..forward();
-    _pulse = AnimationController(
+    _halo = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 4000),
+    )..repeat();
     _wave = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2600),
+      duration: const Duration(milliseconds: 3200),
     )..repeat();
+    _bgShift = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 5000),
+    )..repeat(reverse: true);
     _go();
   }
 
   Future<void> _go() async {
-    await Future.delayed(const Duration(milliseconds: 3400));
+    await Future.delayed(const Duration(milliseconds: 3800));
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
     final seen = prefs.getBool('onboarding_seen') ?? false;
@@ -57,7 +62,7 @@ class _SplashScreenNewState extends State<SplashScreenNew>
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 600),
+        transitionDuration: const Duration(milliseconds: 700),
         pageBuilder: (_, __, ___) => next,
         transitionsBuilder: (_, a, __, c) =>
   FadeTransition(opacity: a, child: c),
@@ -68,8 +73,9 @@ class _SplashScreenNewState extends State<SplashScreenNew>
   @override
   void dispose() {
     _intro.dispose();
-    _pulse.dispose();
+    _halo.dispose();
     _wave.dispose();
+    _bgShift.dispose();
     super.dispose();
   }
 
@@ -77,54 +83,98 @@ class _SplashScreenNewState extends State<SplashScreenNew>
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: JC.heroGradient),
-        child: Stack(
-children: [
-  ..._waves(),
-  ..._particles(size),
-  SafeArea(
-    child: Column(
-      children: [
-        const Spacer(flex: 3),
-        _logo(),
-        const SizedBox(height: 40),
-        _name(),
-        const SizedBox(height: 14),
-        _tagline(),
-        const Spacer(flex: 4),
-        _loader(),
-        const SizedBox(height: 44),
+      body: AnimatedBuilder(
+        animation: _bgShift,
+        builder: (_, __) {
+final shift = _bgShift.value;
+return Container(
+  decoration: BoxDecoration(
+    gradient: LinearGradient(
+      colors: const [
+        Color(0xFFFFB37A),
+        Color(0xFFFF7A1A),
+        Color(0xFFE55A00),
+        Color(0xFFC94400),
       ],
+      begin: Alignment(-1 + shift * 0.4, -1),
+      end: Alignment(1, 1 - shift * 0.3),
     ),
   ),
-],
+  child: Stack(
+    children: [
+      ..._signalWaves(),
+      ..._particles(size),
+      SafeArea(
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(flex: 2),
+              _logoWithHalo(),
+              const SizedBox(height: 44),
+              _animatedText(
+                'JAJ Net',
+                delay: 500,
+                style: GoogleFonts.poppins(
+                  fontSize: 48,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: 2,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              _animatedText(
+                'তৈরি হোক নিরবিচ্ছিন্ন সম্পর্ক',
+                delay: 900,
+                style: GoogleFonts.hindSiliguri(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withOpacity(0.94),
+                  letterSpacing: 0.6,
+                ),
+              ),
+              const Spacer(flex: 3),
+              _pulseDots(),
+              const SizedBox(height: 60),
+            ],
+          ),
         ),
+      ),
+    ],
+  ),
+);
+        },
       ),
     );
   }
 
-  List<Widget> _waves() {
-    return List.generate(4, (i) {
+  List<Widget> _signalWaves() {
+    return List.generate(5, (i) {
       return AnimatedBuilder(
         animation: _wave,
         builder: (_, __) {
-final p = (_wave.value + i / 4) % 1.0;
-final scale = 0.4 + p * 2.2;
-final opacity = (1.0 - p) * 0.4;
+final p = (_wave.value + i / 5.0) % 1.0;
+final size = 80 + p * 480;
+final opacity = (1.0 - p) * 0.5;
 return Center(
-  child: Transform.scale(
-    scale: scale,
-    child: Container(
-      width: 200,
-      height: 200,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white
-              .withOpacity(opacity.clamp(0.0, 1.0)),
-          width: 1.4,
-        ),
+  child: Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      border: Border.all(
+        color: Colors.white.withOpacity(
+            opacity.clamp(0.0, 0.55)),
+        width: 1.6,
       ),
     ),
   ),
@@ -135,24 +185,29 @@ return Center(
   }
 
   List<Widget> _particles(Size size) {
-    final r = Random(11);
-    return List.generate(30, (i) {
-      final left = r.nextDouble() * size.width;
+    final r = Random(13);
+    return List.generate(40, (i) {
+      final baseLeft = r.nextDouble() * size.width;
       final baseTop = r.nextDouble() * size.height;
-      final sz = 2.0 + r.nextDouble() * 3.5;
+      final dotSize = 1.5 + r.nextDouble() * 3.0;
       final delay = r.nextDouble();
+      final swayAmp = 12 + r.nextDouble() * 30;
+      final speed = 0.35 + r.nextDouble() * 0.55;
+      final baseOpacity = 0.25 + r.nextDouble() * 0.5;
       return AnimatedBuilder(
         animation: _wave,
         builder: (_, __) {
-final t = (_wave.value + delay) % 1.0;
+final t = ((_wave.value * speed) + delay) % 1.0;
+final xOff = sin(t * pi * 2) * swayAmp;
+final yOff = -t * 140;
 return Positioned(
-  left: left,
-  top: baseTop - t * 80,
+  left: baseLeft + xOff,
+  top: baseTop + yOff,
   child: Opacity(
-    opacity: (1 - t) * 0.55,
+    opacity: ((1 - t) * baseOpacity).clamp(0.0, 1.0),
     child: Container(
-      width: sz,
-      height: sz,
+      width: dotSize,
+      height: dotSize,
       decoration: const BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
@@ -165,133 +220,130 @@ return Positioned(
     });
   }
 
-  Widget _logo() {
+  Widget _logoWithHalo() {
     return AnimatedBuilder(
       animation: _intro,
       builder: (_, __) {
-        final t =
-  Curves.easeOutBack.transform(_intro.value.clamp(0.0, 1.0));
-        return Transform.scale(
-scale: 0.3 + t * 0.7,
-child: AnimatedBuilder(
-  animation: _pulse,
-  builder: (_, __) {
-    final glow = 0.3 + _pulse.value * 0.4;
-    return Container(
-      width: 148,
-      height: 148,
+        final t = Curves.easeOutBack
+  .transform(_intro.value.clamp(0.0, 1.0));
+        return SizedBox(
+width: 220,
+height: 220,
+child: Stack(
+  alignment: Alignment.center,
+  children: [
+    AnimatedBuilder(
+      animation: _halo,
+      builder: (_, __) {
+        return Transform.rotate(
+          angle: _halo.value * pi * 2,
+          child: Container(
+            width: 210,
+            height: 210,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: SweepGradient(
+                colors: [
+                  Colors.white.withOpacity(0.0),
+                  Colors.white.withOpacity(0.7),
+                  Colors.white.withOpacity(0.0),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+    Container(
+      width: 180,
+      height: 180,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(46),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.white.withOpacity(glow),
-            blurRadius: 44,
-            spreadRadius: 5,
-          ),
-          BoxShadow(
-            color: JC.primaryDark.withOpacity(0.5),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(0.08),
       ),
-      child: const Icon(
-        Icons.wifi_rounded,
-        size: 78,
-        color: JC.primary,
-      ),
-    );
-  },
-),
-        );
-      },
-    );
-  }
-
-  Widget _name() {
-    return AnimatedBuilder(
-      animation: _intro,
-      builder: (_, __) {
-        final t = (_intro.value * 1.5).clamp(0.0, 1.0);
-        return Opacity(
-opacity: t,
-child: Transform.translate(
-  offset: Offset(0, (1 - t) * 30),
-  child: Text(
-    'JAJ Net',
-    style: GoogleFonts.poppins(
-      fontSize: 44,
-      fontWeight: FontWeight.w800,
-      color: Colors.white,
-      letterSpacing: 1.8,
     ),
-  ),
-),
-        );
-      },
-    );
-  }
-
-  Widget _tagline() {
-    return AnimatedBuilder(
-      animation: _intro,
-      builder: (_, __) {
-        final t = ((_intro.value - 0.2) * 1.5).clamp(0.0, 1.0);
-        return Opacity(
-opacity: t,
-child: Transform.translate(
-  offset: Offset(0, (1 - t) * 20),
-  child: Text(
-    'তৈরি হোক নিরবিচ্ছিন্ন সম্পর্ক',
-    style: GoogleFonts.hindSiliguri(
-      fontSize: 17,
-      fontWeight: FontWeight.w500,
-      color: Colors.white.withOpacity(0.92),
-      letterSpacing: 0.5,
-    ),
-  ),
-),
-        );
-      },
-    );
-  }
-
-  Widget _loader() {
-    return AnimatedBuilder(
-      animation: _intro,
-      builder: (_, __) {
-        final t = ((_intro.value - 0.4) * 1.5).clamp(0.0, 1.0);
-        return Opacity(
-opacity: t,
-child: Container(
-  width: 64,
-  height: 4,
-  decoration: BoxDecoration(
-    color: Colors.white.withOpacity(0.25),
-    borderRadius: BorderRadius.circular(3),
-  ),
-  child: AnimatedBuilder(
-    animation: _wave,
-    builder: (_, __) => Align(
-      alignment: Alignment(-1 + 2 * _wave.value, 0),
+    Transform.scale(
+      scale: 0.3 + t * 0.7,
       child: Container(
-        width: 24,
-        height: 4,
+        width: 132,
+        height: 132,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(40),
           boxShadow: [
             BoxShadow(
-              color: Colors.white.withOpacity(0.6),
-              blurRadius: 8,
+              color: Colors.white.withOpacity(0.5),
+              blurRadius: 40,
+              spreadRadius: 2,
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 30,
+              offset: const Offset(0, 14),
             ),
           ],
         ),
+        child: const Icon(
+          Icons.wifi_rounded,
+          size: 70,
+          color: JC.primary,
+        ),
       ),
     ),
-  ),
+  ],
 ),
+        );
+      },
+    );
+  }
+
+  Widget _animatedText(String text, {
+    required int delay,
+    required TextStyle style,
+  }) {
+    return AnimatedBuilder(
+      animation: _intro,
+      builder: (_, __) {
+        final threshold = delay / 2000.0;
+        final t = ((_intro.value - threshold) / (1 - threshold))
+  .clamp(0.0, 1.0);
+        return Opacity(
+opacity: t,
+child: Transform.translate(
+  offset: Offset(0, (1 - t) * 28),
+  child: Text(text,
+      textAlign: TextAlign.center, style: style),
+),
+        );
+      },
+    );
+  }
+
+  Widget _pulseDots() {
+    return AnimatedBuilder(
+      animation: _wave,
+      builder: (_, __) {
+        return Row(
+mainAxisSize: MainAxisSize.min,
+children: List.generate(3, (i) {
+  final phase = (_wave.value + i * 0.2) % 1.0;
+  final scale = 0.6 + (sin(phase * pi * 2) + 1) * 0.35;
+  return Container(
+    margin: const EdgeInsets.symmetric(horizontal: 5),
+    child: Transform.scale(
+      scale: scale,
+      child: Container(
+        width: 9,
+        height: 9,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          shape: BoxShape.circle,
+        ),
+      ),
+    ),
+  );
+}),
         );
       },
     );
