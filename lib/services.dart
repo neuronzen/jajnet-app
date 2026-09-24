@@ -90,11 +90,9 @@ class AppInfo {
     'গাজীপুর',
   ];
   static const List<Map<String, dynamic>> packages = [
-    {'name': 'Starter', 'speed': '20 Mbps', 'price': 500},
-    {'name': 'Standard', 'speed': '30 Mbps', 'price': 650},
-    {'name': 'Plus', 'speed': '40 Mbps', 'price': 800},
-    {'name': 'Pro', 'speed': '50 Mbps', 'price': 1000},
-    {'name': 'Premium', 'speed': '70 Mbps', 'price': 1200},
-    {'name': 'Ultimate', 'speed': '100 Mbps', 'price': 1500},
-  ];
+  {'name': 'Starter', 'speed': '20 Mbps', 'price': 525},
+  {'name': 'Basic', 'speed': '30 Mbps', 'price': 650},
+  {'name': 'Elite', 'speed': '40 Mbps', 'price': 750},
+  {'name': 'Premium', 'speed': '50 Mbps', 'price': 850},
+];
 }
