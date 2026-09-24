@@ -1,0 +1,65 @@
+name: Fix Pubspec Dependencies
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rewrite pubspec.yaml
+        run: |
+          cat > pubspec.yaml << 'ENDPUB'
+          name: customer
+          description: JAJ Net ISP Customer App
+          publish_to: 'none'
+          version: 1.0.0+1
+
+          environment:
+            sdk: '>=3.3.0 <4.0.0'
+
+          dependencies:
+            flutter:
+              sdk: flutter
+            cupertino_icons: ^1.0.6
+            firebase_core: ^2.32.0
+            firebase_auth: ^4.20.0
+            cloud_firestore: ^4.17.5
+            google_fonts: ^6.1.0
+            url_launcher: ^6.2.2
+            shared_preferences: ^2.2.2
+            intl: ^0.19.0
+            http: ^1.1.2
+            pdf: ^3.10.7
+            printing: ^5.11.1
+
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+            flutter_lints: ^3.0.0
+
+          flutter:
+            uses-material-design: true
+          ENDPUB
+          sed -i 's/^          //' pubspec.yaml
+
+      - name: Verify pubspec
+        run: |
+          echo "=== pubspec.yaml ==="
+          cat pubspec.yaml
+          echo ""
+          echo "=== check pdf ==="
+          grep -E "pdf:|printing:|http:" pubspec.yaml
+
+      - name: Commit
+        run: |
+          git config user.name "JAJ Net Bot"
+          git config user.email "bot@jajnet.local"
+          git add pubspec.yaml
+          git commit -m "Fix pubspec: add pdf, printing, http dependencies" || echo "no change"
+          git push
