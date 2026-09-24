@@ -8,9 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Java 17
@@ -26,6 +25,24 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Cache Pub
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.yaml') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+
       - name: Generate android scaffold
         run: |
           cd /tmp
@@ -34,17 +51,18 @@ jobs:
 
       - name: Write gradle-wrapper.properties
         run: |
-          cat > android/gradle/wrapper/gradle-wrapper.properties << 'GRADLE_EOF'
+          cat > android/gradle/wrapper/gradle-wrapper.properties << 'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
           distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-all.zip
-          GRADLE_EOF
+          EOF
+          sed -i 's/^          //' android/gradle/wrapper/gradle-wrapper.properties
 
       - name: Write settings.gradle
         run: |
-          cat > android/settings.gradle << 'GRADLE_EOF'
+          cat > android/settings.gradle << 'EOF'
           pluginManagement {
               def flutterSdkPath = {
                   def properties = new Properties()
@@ -71,11 +89,12 @@ jobs:
           }
 
           include ":app"
-          GRADLE_EOF
+          EOF
+          sed -i 's/^          //' android/settings.gradle
 
       - name: Write root build.gradle
         run: |
-          cat > android/build.gradle << 'GRADLE_EOF'
+          cat > android/build.gradle << 'EOF'
           allprojects {
               repositories {
                   google()
@@ -94,11 +113,12 @@ jobs:
           tasks.register("clean", Delete) {
               delete rootProject.buildDir
           }
-          GRADLE_EOF
+          EOF
+          sed -i 's/^          //' android/build.gradle
 
       - name: Write app build.gradle
         run: |
-          cat > android/app/build.gradle << 'GRADLE_EOF'
+          cat > android/app/build.gradle << 'EOF'
           plugins {
               id "com.android.application"
               id "kotlin-android"
@@ -150,11 +170,12 @@ jobs:
           flutter {
               source = "../.."
           }
-          GRADLE_EOF
+          EOF
+          sed -i 's/^          //' android/app/build.gradle
 
       - name: Write AndroidManifest.xml
         run: |
-          cat > android/app/src/main/AndroidManifest.xml << 'GRADLE_EOF'
+          cat > android/app/src/main/AndroidManifest.xml << 'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET"/>
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -197,7 +218,8 @@ jobs:
                   </intent>
               </queries>
           </manifest>
-          GRADLE_EOF
+          EOF
+          sed -i 's/^          //' android/app/src/main/AndroidManifest.xml
 
       - name: Place google-services.json
         run: cp google-services.json android/app/google-services.json
