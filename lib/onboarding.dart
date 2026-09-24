@@ -1,3 +1,4 @@
+import 'login.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -62,7 +63,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _finish() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const LoginScreenNew()),
     );
   }
 
