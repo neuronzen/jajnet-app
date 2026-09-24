@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'services.dart';
+import 'dashboard_v2.dart';
 import 'theme.dart';
 
 // ==================== SPLASH ====================
@@ -333,7 +334,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _i = 0;
   final _pages = const [
-    HomeTab(),
+    DashboardHome(),
     BillsTab(),
     SupportTab(),
     ProfileTab(),
@@ -802,15 +803,19 @@ class BillsTab extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16),
             child: SizedBox(
-              height: 50,
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const PaymentScreen())),
-                icon: const Icon(Icons.add),
-                label: const Text('নতুন পেমেন্ট'),
-              ),
-            ),
+    height: 58,
+    width: double.infinity,
+    child: ElevatedButton.icon(
+      onPressed: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const PaymentScreen())),
+      icon: const Icon(Icons.add),
+      label: Text('নতুন পেমেন্ট',
+          style: GoogleFonts.hindSiliguri(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              height: 1.5)),
+    ),
+  ),
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(

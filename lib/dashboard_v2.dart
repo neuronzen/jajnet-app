@@ -1,0 +1,601 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'notice_detail.dart';
+import 'screens.dart';
+import 'services.dart';
+import 'theme.dart';
+
+class DashboardHome extends StatefulWidget {
+  const DashboardHome({super.key});
+  @override
+  State<DashboardHome> createState() => _DashboardHomeState();
+}
+
+class _DashboardHomeState extends State<DashboardHome> {
+  Map<String, dynamic>? _user;
+  List<Map<String, dynamic>> _payments = [];
+  List<Map<String, dynamic>> _notices = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final u = AuthService.currentUser;
+    if (u == null) return;
+    try {
+      final results = await Future.wait([
+        FirebaseFirestore.instance.collection('users').doc(u.uid).get(),
+        FirebaseFirestore.instance
+  .collection('payments')
+  .where('userId', isEqualTo: u.uid)
+  .get(),
+        FirebaseFirestore.instance.collection('notices').limit(5).get(),
+      ]);
+      final userDoc = results[0] as DocumentSnapshot;
+      final paySnap = results[1] as QuerySnapshot;
+      final noticeSnap = results[2] as QuerySnapshot;
+
+      final pays = paySnap.docs.map((d) {
+        final m = d.data() as Map<String, dynamic>;
+        return <String, dynamic>{'id': d.id, ...m};
+      }).toList();
+      pays.sort((a, b) {
+        final at = a['createdAt'] as Timestamp?;
+        final bt = b['createdAt'] as Timestamp?;
+        if (at == null || bt == null) return 0;
+        return bt.compareTo(at);
+      });
+
+      final nots = noticeSnap.docs.map((d) {
+        final m = d.data() as Map<String, dynamic>;
+        return <String, dynamic>{'id': d.id, ...m};
+      }).toList();
+
+      if (!mounted) return;
+      setState(() {
+        _user = userDoc.data() as Map<String, dynamic>?;
+        _payments = pays.take(3).toList();
+        _notices = nots.take(3).toList();
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('Dashboard error: $e');
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _refresh() async {
+    await _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: JC.primary),
+      );
+    }
+
+    final name = (_user?['name'] ?? 'গ্রাহক').toString();
+    final pkg = (_user?['package'] ?? '20 Mbps').toString();
+    final due = (_user?['dueAmount'] ?? 0) as num;
+    final status = (_user?['status'] ?? 'active').toString();
+    final createdAt = _user?['createdAt'] as Timestamp?;
+
+    int daysUsed = 0;
+    int daysLeft = 30;
+    if (createdAt != null) {
+      final diff = DateTime.now().difference(createdAt.toDate()).inDays;
+      daysUsed = diff.clamp(0, 30);
+      daysLeft = (30 - diff).clamp(0, 30);
+    }
+    final progress = daysUsed / 30.0;
+    final isDueSoon = daysLeft <= 5 && due > 0;
+
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      color: JC.primary,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
+        children: [
+_greeting(name),
+const SizedBox(height: 20),
+_balanceCard(due, pkg, status, daysLeft, progress, isDueSoon),
+const SizedBox(height: 24),
+_sectionTitle('দ্রুত কাজ'),
+const SizedBox(height: 12),
+_quickActions(context),
+if (_payments.isNotEmpty) ...[
+  const SizedBox(height: 24),
+  _sectionTitle('সাম্প্রতিক পেমেন্ট'),
+  const SizedBox(height: 12),
+  _paymentsCard(),
+],
+if (_notices.isNotEmpty) ...[
+  const SizedBox(height: 24),
+  _sectionTitle('নোটিশ বোর্ড'),
+  const SizedBox(height: 12),
+  _noticesCard(context),
+],
+const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _greeting(String name) {
+    return Row(
+      children: [
+        Expanded(
+child: Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text(
+      'স্বাগতম, $name 👋',
+      style: GoogleFonts.hindSiliguri(
+        fontSize: 22,
+        fontWeight: FontWeight.w700,
+        color: JC.ink,
+        height: 1.4,
+      ),
+    ),
+    const SizedBox(height: 4),
+    Text(
+      'আপনার JAJ Net অ্যাকাউন্ট',
+      style: GoogleFonts.hindSiliguri(
+        fontSize: 13,
+        color: JC.grey,
+        height: 1.4,
+      ),
+    ),
+  ],
+),
+        ),
+        Container(
+width: 46,
+height: 46,
+decoration: BoxDecoration(
+  gradient: JC.heroGradient,
+  borderRadius: BorderRadius.circular(14),
+  boxShadow: [
+    BoxShadow(
+      color: JC.primary.withOpacity(0.3),
+      blurRadius: 14,
+      offset: const Offset(0, 6),
+    ),
+  ],
+),
+child: const Icon(Icons.wifi_rounded,
+    color: Colors.white, size: 24),
+        ),
+      ],
+    );
+  }
+
+  Widget _balanceCard(
+    num due,
+    String pkg,
+    String status,
+    int daysLeft,
+    double progress,
+    bool dueSoon,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: JC.heroGradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+BoxShadow(
+  color: JC.primary.withOpacity(0.35),
+  blurRadius: 26,
+  offset: const Offset(0, 12),
+),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+Row(
+  children: [
+    Text(
+      'মোট বকেয়া',
+      style: GoogleFonts.hindSiliguri(
+        color: Colors.white.withOpacity(0.85),
+        fontSize: 13,
+        height: 1.4,
+      ),
+    ),
+    const Spacer(),
+    Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.22),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: GoogleFonts.poppins(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          letterSpacing: 0.5,
+          height: 1.4,
+        ),
+      ),
+    ),
+  ],
+),
+const SizedBox(height: 6),
+Text(
+  '৳ ${NumberFormat('#,##0').format(due)}',
+  style: GoogleFonts.poppins(
+    fontSize: 38,
+    fontWeight: FontWeight.w700,
+    color: Colors.white,
+    height: 1.4,
+  ),
+),
+const SizedBox(height: 18),
+Container(
+  height: 6,
+  decoration: BoxDecoration(
+    color: Colors.white.withOpacity(0.25),
+    borderRadius: BorderRadius.circular(3),
+  ),
+  child: FractionallySizedBox(
+    alignment: Alignment.centerLeft,
+    widthFactor: progress,
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(3),
+      ),
+    ),
+  ),
+),
+const SizedBox(height: 10),
+Row(
+  children: [
+    Icon(
+      dueSoon
+          ? Icons.warning_amber_rounded
+          : Icons.access_time_rounded,
+      color: Colors.white.withOpacity(0.85),
+      size: 15,
+    ),
+    const SizedBox(width: 6),
+    Text(
+      due > 0
+          ? '$daysLeft দিন বাকি'
+          : 'পরিশোধিত',
+      style: GoogleFonts.hindSiliguri(
+        fontSize: 12.5,
+        color: Colors.white.withOpacity(0.9),
+        fontWeight: FontWeight.w500,
+        height: 1.4,
+      ),
+    ),
+    const Spacer(),
+    Icon(Icons.speed_rounded,
+        color: Colors.white.withOpacity(0.85), size: 15),
+    const SizedBox(width: 6),
+    Text(
+      pkg,
+      style: GoogleFonts.poppins(
+        fontSize: 12.5,
+        color: Colors.white.withOpacity(0.9),
+        fontWeight: FontWeight.w600,
+        height: 1.4,
+      ),
+    ),
+  ],
+),
+const SizedBox(height: 18),
+GestureDetector(
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(
+        builder: (_) => const PaymentScreen()),
+  ),
+  child: Container(
+    height: 50,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'এখনই পরিশোধ করুন',
+          style: GoogleFonts.hindSiliguri(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: JC.primary,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(width: 6),
+        const Icon(Icons.arrow_forward_rounded,
+            color: JC.primary, size: 18),
+      ],
+    ),
+  ),
+),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String s) {
+    return Text(
+      s,
+      style: GoogleFonts.hindSiliguri(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: JC.ink,
+        height: 1.4,
+      ),
+    );
+  }
+
+  Widget _quickActions(BuildContext context) {
+    final items = [
+      _QA('বিল দিন', Icons.payments_rounded, const PaymentScreen()),
+      _QA('প্যাকেজ', Icons.wifi_rounded, const PackagesScreen()),
+      _QA('সাপোর্ট', Icons.support_agent_rounded, null,
+url: 'tel:${AppInfo.helpline}'),
+      _QA('হোয়াটসঅ্যাপ', Icons.chat_rounded, null,
+url: 'https://wa.me/${AppInfo.whatsapp}'),
+    ];
+    return Row(
+      children: items.map((it) {
+        return Expanded(
+child: GestureDetector(
+  onTap: () async {
+    if (it.page != null) {
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => it.page!));
+    } else if (it.url != null) {
+      final uri = Uri.parse(it.url!);
+      if (await canLaunchUrl(uri)) launchUrl(uri);
+    }
+  },
+  child: Column(
+    children: [
+      Container(
+        width: 58,
+        height: 58,
+        decoration: BoxDecoration(
+          color: JC.cream,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+              color: JC.creamDeep, width: 1.5),
+        ),
+        child:
+            Icon(it.icon, color: JC.primary, size: 26),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        it.label,
+        style: GoogleFonts.hindSiliguri(
+          fontSize: 11.5,
+          color: JC.ink,
+          fontWeight: FontWeight.w500,
+          height: 1.4,
+        ),
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    ],
+  ),
+),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _paymentsCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: JC.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: JC.creamDeep, width: 1.5),
+      ),
+      child: Column(
+        children: _payments.asMap().entries.map((e) {
+final p = e.value;
+final s = (p['status'] ?? 'pending').toString();
+final color = s == 'verified'
+    ? JC.success
+    : s == 'pending'
+        ? JC.warning
+        : JC.error;
+final icon = s == 'verified'
+    ? Icons.check_circle_rounded
+    : s == 'pending'
+        ? Icons.schedule_rounded
+        : Icons.cancel_rounded;
+final isLast = e.key == _payments.length - 1;
+return Container(
+  padding: const EdgeInsets.symmetric(
+      horizontal: 16, vertical: 14),
+  decoration: BoxDecoration(
+    border: isLast
+        ? null
+        : const Border(
+            bottom: BorderSide(
+                color: JC.creamDeep, width: 1),
+          ),
+  ),
+  child: Row(
+    children: [
+      Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '৳ ${p['amount'] ?? 0}',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: JC.ink,
+                height: 1.4,
+              ),
+            ),
+            Text(
+              'TrxID: ${p['trxId'] ?? ''}',
+              style: GoogleFonts.hindSiliguri(
+                fontSize: 11.5,
+                color: JC.grey,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+      Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          s == 'verified'
+              ? 'VERIFIED'
+              : s == 'pending'
+                  ? 'PENDING'
+                  : 'REJECTED',
+          style: GoogleFonts.poppins(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: color,
+            letterSpacing: 0.4,
+            height: 1.4,
+          ),
+        ),
+      ),
+    ],
+  ),
+);
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _noticesCard(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: JC.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: JC.creamDeep, width: 1.5),
+      ),
+      child: Column(
+        children: _notices.asMap().entries.map((e) {
+final n = e.value;
+final isLast = e.key == _notices.length - 1;
+return InkWell(
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => NoticeDetailScreen(
+        title: (n['title'] ?? '').toString(),
+        body: (n['body'] ?? '').toString(),
+      ),
+    ),
+  ),
+  borderRadius: BorderRadius.circular(18),
+  child: Container(
+    padding: const EdgeInsets.symmetric(
+        horizontal: 16, vertical: 14),
+    decoration: BoxDecoration(
+      border: isLast
+          ? null
+          : const Border(
+              bottom: BorderSide(
+                  color: JC.creamDeep, width: 1),
+            ),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: JC.cream,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.campaign_rounded,
+              color: JC.primary, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                (n['title'] ?? '').toString(),
+                style: GoogleFonts.hindSiliguri(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: JC.ink,
+                  height: 1.4,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                (n['body'] ?? '').toString(),
+                style: GoogleFonts.hindSiliguri(
+                  fontSize: 12,
+                  color: JC.grey,
+                  height: 1.4,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        const Icon(Icons.chevron_right_rounded,
+            color: JC.grey, size: 22),
+      ],
+    ),
+  ),
+);
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _QA {
+  final String label;
+  final IconData icon;
+  final Widget? page;
+  final String? url;
+  const _QA(this.label, this.icon, this.page, {this.url});
+}
