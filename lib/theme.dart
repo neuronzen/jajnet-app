@@ -11,6 +11,7 @@ class JC {
   static const Color peach = Color(0xFFFFD9B8);
   static const Color white = Color(0xFFFFFFFF);
   static const Color ink = Color(0xFF151A26);
+  static const Color charcoal = Color(0xFF151A26);
   static const Color inkSoft = Color(0xFF2A3140);
   static const Color graphite = Color(0xFF4A5260);
   static const Color grey = Color(0xFF8A92A0);
