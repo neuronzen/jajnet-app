@@ -479,12 +479,29 @@ class InvoicePreviewScreen extends StatelessWidget {
                 child: CircularProgressIndicator(color: JC.primary));
           }
           if (snap.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text('ইনভয়েস তৈরি করা যায়নি: ${snap.error}',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.hindSiliguri(height: 1.5)),
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('ERROR:',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.red)),
+                  const SizedBox(height: 8),
+                  SelectableText('${snap.error}',
+                      style: const TextStyle(fontSize: 12)),
+                  const SizedBox(height: 20),
+                  const Text('STACK TRACE:',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.red)),
+                  const SizedBox(height: 8),
+                  SelectableText('${snap.stackTrace}',
+                      style: const TextStyle(fontSize: 10)),
+                ],
               ),
             );
           }
