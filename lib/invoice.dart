@@ -37,9 +37,9 @@ class InvoiceService {
 
     // Load Kalpurush (Bengali + Latin)
     final bengaliRegular = pw.Font.ttf(
-        await rootBundle.load('assets/fonts/Kalpurush.ttf'));
+        await rootBundle.load('assets/fonts/SolaimanLipi.ttf'));
     final bengaliBold = pw.Font.ttf(
-        await rootBundle.load('assets/fonts/Kalpurush.ttf'));
+        await rootBundle.load('assets/fonts/SolaimanLipi.ttf'));
     final latinRegular = bengaliRegular;
     final latinBold = bengaliBold;
 
