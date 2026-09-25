@@ -291,7 +291,7 @@ jobs:
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
-          storeFile=keystore/jajnet-release.jks
+          storeFile=../keystore/jajnet-release.jks
           KEYEOF
           sed -i 's/^          //' android/key.properties
           cat android/key.properties
