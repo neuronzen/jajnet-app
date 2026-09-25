@@ -35,24 +35,17 @@ class InvoiceService {
   }) async {
     final doc = pw.Document();
 
-    // Load fonts
+    // Load Kalpurush (Bengali + Latin)
     final bengaliRegular = pw.Font.ttf(
-        await rootBundle.load('assets/fonts/NotoSansBengali-Regular.ttf'));
+        await rootBundle.load('assets/fonts/Kalpurush.ttf'));
     final bengaliBold = pw.Font.ttf(
-        await rootBundle.load('assets/fonts/NotoSansBengali-Bold.ttf'));
-    final latinRegular = pw.Font.helvetica();
-    final latinBold = pw.Font.helveticaBold();
+        await rootBundle.load('assets/fonts/Kalpurush.ttf'));
+    final latinRegular = bengaliRegular;
+    final latinBold = bengaliBold;
 
     final theme = pw.ThemeData.withFont(
-      base: latinRegular,
-      bold: latinBold,
-      fontFallback: [bengaliRegular, bengaliBold],
-    );
-
-    final bnTheme = pw.ThemeData.withFont(
       base: bengaliRegular,
       bold: bengaliBold,
-      fontFallback: [latinRegular, latinBold],
     );
 
     String fmtDate(DateTime d) => DateFormat('dd MMM yyyy').format(d);
