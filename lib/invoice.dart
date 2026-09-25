@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:saver_gallery/saver_gallery.dart';
 
 import 'theme.dart';
 
@@ -82,26 +83,26 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(10),
               child: RepaintBoundary(
                 key: _boundaryKey,
                 child: Container(
                   color: Colors.white,
-                  padding: const EdgeInsets.all(22),
+                  padding: const EdgeInsets.all(10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // ============ HEADER ============
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFFFF8A3D), Color(0xFFE55A00)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -111,7 +112,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                               children: [
                                 Text('JAJ Net',
                                     style: GoogleFonts.poppins(
-                                        fontSize: 24,
+                                        fontSize: 20,
                                         fontWeight: FontWeight.w800,
                                         color: Colors.white,
                                         letterSpacing: 0.5,
@@ -129,10 +130,10 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                               children: [
                                 Text('INVOICE',
                                     style: GoogleFonts.poppins(
-                                        fontSize: 15,
+                                        fontSize: 13,
                                         fontWeight: FontWeight.w700,
                                         color: Colors.white,
-                                        letterSpacing: 3,
+                                        letterSpacing: 2,
                                         height: 1.3)),
                                 const SizedBox(height: 4),
                                 Text(_invoiceNo,
@@ -146,7 +147,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 22),
+                      const SizedBox(height: 14),
 
                       // ============ CUSTOMER ============
                       _sectionHeading('গ্রাহকের তথ্য'),
@@ -157,7 +158,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                       if ((widget.user['address'] ?? '').toString().isNotEmpty)
                         _infoRow('ঠিকানা', (widget.user['address'] ?? '').toString()),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
                       // ============ SERVICE ============
                       _sectionHeading('সার্ভিসের তথ্য'),
@@ -170,7 +171,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                           (widget.user['status'] ?? 'active').toString()[0].toUpperCase() +
                               (widget.user['status'] ?? 'active').toString().substring(1)),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
                       // ============ BILLING ============
                       _sectionHeading('বিলের হিসাব'),
@@ -185,7 +186,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                       ),
                       _infoRow('Total Due', '৳$total', bold: true, large: true),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
                       // ============ PAYMENT ============
                       Row(
@@ -216,12 +217,12 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                       _infoRow('Verification',
                           (widget.payment['status'] ?? 'pending').toString().toUpperCase()),
 
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 10),
 
                       // ============ REMAINING ============
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
                           color: remaining > 0
                               ? const Color(0xFFFFF1F2)
@@ -255,12 +256,12 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 22),
+                      const SizedBox(height: 14),
 
                       // ============ FOOTER ============
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFF8F2),
                           borderRadius: BorderRadius.circular(10),
@@ -389,17 +390,46 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
           text: 'JAJ Net ইনভয়েস — $_invoiceNo',
         );
       } else {
-        if (!mounted) return;
-        Clipboard.setData(ClipboardData(text: file.path));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('ইনভয়েস সেভ হয়েছে: $fileName',
-                style: GoogleFonts.hindSiliguri(height: 1.5)),
-            backgroundColor: JC.success,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        // Save to Gallery
+        try {
+          final result = await SaverGallery.saveImage(
+            pngBytes,
+            quality: 100,
+            fileName: fileName.replaceAll('.png', ''),
+            androidRelativePath: 'Pictures/JAJNet',
+            skipIfExists: false,
+          );
+          if (!mounted) return;
+          if (result.isSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('ছবি গ্যালারিতে সেভ হয়েছে',
+                    style: GoogleFonts.hindSiliguri(height: 1.5)),
+                backgroundColor: JC.success,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('সেভ করা যায়নি: ${result.errorMessage}',
+                    style: GoogleFonts.hindSiliguri(height: 1.5)),
+                backgroundColor: JC.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('সেভ করা যায়নি: $e',
+                  style: GoogleFonts.hindSiliguri(height: 1.5)),
+              backgroundColor: JC.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -418,7 +448,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   Widget _sectionHeading(String text) {
     return Text(text,
         style: GoogleFonts.hindSiliguri(
-            fontSize: 14,
+            fontSize: 12.5,
             fontWeight: FontWeight.w800,
             color: JC.ink,
             letterSpacing: 0.2,
@@ -427,7 +457,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
 
   Widget _infoRow(String label, String value, {bool bold = false, bool large = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -435,7 +465,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             flex: 4,
             child: Text(label,
                 style: GoogleFonts.hindSiliguri(
-                    fontSize: 12.5, color: JC.grey, height: 1.5)),
+                    fontSize: 11.5, color: JC.grey, height: 1.4)),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -443,7 +473,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             child: Text(value,
                 textAlign: TextAlign.right,
                 style: GoogleFonts.hindSiliguri(
-                    fontSize: large ? 15 : 12.5,
+                    fontSize: large ? 13.5 : 11.5,
                     fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
                     color: JC.ink,
                     height: 1.5)),
