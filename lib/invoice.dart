@@ -74,7 +74,9 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
         invoiceDate;
     final paid = (widget.payment['amount'] ?? 0) as int;
     final previousDue = (widget.payment['dueBefore'] ?? 0) as int;
-    final subtotal = previousDue + widget.monthlyPrice * widget.months;
+    final monthlyDiscount = ((widget.user['monthlyDiscount'] ?? 0) as num).toInt();
+    final grossAmount = widget.monthlyPrice * widget.months;
+    final subtotal = previousDue + grossAmount - monthlyDiscount;
     final total = subtotal - paid;
     final remaining = total < 0 ? 0 : total;
     final isPaid = remaining == 0;
@@ -327,7 +329,8 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                 'Internet Package — ${widget.user['package'] ?? ''}',
                                 '৳${widget.monthlyPrice * widget.months}'),
                             _itemLine('Previous Due', '৳$previousDue'),
-                            _itemLine('Discount', '৳0'),
+                            if (monthlyDiscount > 0)
+                              _itemLine('Discount', '- ৳$monthlyDiscount'),
                           ],
                         ),
                       ),
@@ -343,8 +346,12 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                         padding: const EdgeInsets.fromLTRB(18, 12, 18, 6),
                         child: Column(
                           children: [
-                            _totalLine('Subtotal', '৳$subtotal'),
-                            _totalLine('Discount', '৳0'),
+                            _totalLine('Subtotal', '৳$grossAmount'),
+                            if (monthlyDiscount > 0)
+                              _totalLine('Discount', '- ৳$monthlyDiscount'),
+                            if (previousDue > 0)
+                              _totalLine('Previous Due', '৳$previousDue'),
+                            _totalLine('Total', '৳$subtotal'),
                             _totalLine('Paid', '৳$paid'),
                           ],
                         ),
