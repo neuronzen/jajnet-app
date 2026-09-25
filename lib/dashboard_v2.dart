@@ -286,6 +286,17 @@ Text(
       color: Colors.white,
       height: 1.3),
 ),
+if ((_user?['monthlyDiscount'] ?? 0) is num && (_user?['monthlyDiscount'] ?? 0) > 0)
+  Padding(
+    padding: const EdgeInsets.only(top: 2),
+    child: Text(
+      '🎁 ডিসকাউন্ট: ৳${_user?['monthlyDiscount']}/মাস',
+      style: GoogleFonts.hindSiliguri(
+          fontSize: 12,
+          color: Colors.white.withOpacity(0.9),
+          height: 1.5),
+    ),
+  ),
 if (!isPaid && _currentMonthCharge > 0) ...[
   const SizedBox(height: 4),
   Text(

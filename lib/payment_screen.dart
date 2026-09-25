@@ -17,6 +17,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   final _trx = TextEditingController();
   int _months = 1;
   int _packagePrice = 500;
+            int _monthlyDiscount = 0;
   int _currentDue = 0;
   String _packageName = '20 Mbps';
   bool _loading = false;
@@ -49,6 +50,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       setState(() {
         _packagePrice = _toInt(d['packagePrice'], 500);
         _currentDue = _toInt(d['dueAmount'], 0);
+        _monthlyDiscount = _toInt(d['monthlyDiscount'], 0);
         _packageName = (d['package'] ?? '20 Mbps').toString();
         _fetching = false;
       });
@@ -65,7 +67,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return int.tryParse(v.toString()) ?? fallback;
   }
 
-  int get _totalAmount => _months * _packagePrice;
+  int get _effectivePrice => (_packagePrice - _monthlyDiscount).clamp(0, 999999);
+            int get _totalAmount => _months * _effectivePrice;
 
   Future<void> _copyNumber() async {
     await Clipboard.setData(
@@ -166,6 +169,9 @@ children: [
   _sectionTitle('পেমেন্ট তথ্য'),
   const SizedBox(height: 10),
   _infoRow('মাসিক বিল', '৳$_packagePrice'),
+                      if (_monthlyDiscount > 0)
+                        _infoRow('ডিসকাউন্ট', '- ৳$_monthlyDiscount',
+                            highlight: true, green: true),
   _infoRow('প্যাকেজ', _packageName),
   if (_currentDue > 0)
     _infoRow('বর্তমান বকেয়া', '৳$_currentDue',
@@ -298,7 +304,7 @@ GestureDetector(
   }
 
   Widget _infoRow(String label, String value,
-      {bool highlight = false}) {
+      {bool highlight = false, bool green = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -317,7 +323,7 @@ Text(
   style: GoogleFonts.poppins(
     fontSize: 15,
     fontWeight: FontWeight.w700,
-    color: highlight ? JC.error : JC.ink,
+    color: green ? JC.success : (highlight ? JC.error : JC.ink),
     height: 1.5,
   ),
 ),
