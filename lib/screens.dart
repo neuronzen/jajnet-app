@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'services.dart';
+import 'invoice.dart';
 import 'dashboard_v2.dart';
 import 'payment_screen.dart';
 import 'notice_detail.dart';
@@ -840,7 +842,27 @@ class BillsTab extends StatelessWidget {
                   children: s.data!.docs.map((doc) {
                     final m = doc.data() as Map<String, dynamic>;
                     final status = m['status'] ?? 'pending';
-                    return Container(
+                    return GestureDetector(
+                      onTap: () async {
+                        final userData = await AuthService.getUserData();
+                        if (userData == null) return;
+                        if (!context.mounted) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => InvoicePreviewScreen(
+                              payment: {'id': doc.id, ...m},
+                              user: userData,
+                              months: 1,
+                              monthlyPrice:
+                                  ((userData['packagePrice'] ?? 525) as num)
+                                      .toInt(),
+                              monthRange: 'তারিখ: ${(m['createdAt'] is Timestamp) ? DateFormat('dd MMM yyyy').format((m['createdAt'] as Timestamp).toDate()) : "N/A"}',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -908,7 +930,7 @@ if (status == 'rejected' && (m['rejectedReason'] ?? '').toString().isNotEmpty)
                           ),
                         ],
                       ),
-                    );
+                    ));
                   }).toList(),
                 );
               },

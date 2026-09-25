@@ -54,12 +54,21 @@ class AuthService {
   }) async {
     final user = currentUser;
     if (user == null) return;
+    // Read current due so invoice can show it later
+    int dueBefore = 0;
+    try {
+      final snap = await _db.collection('users').doc(user.uid).get();
+      if (snap.exists) {
+        dueBefore = ((snap.data()?['dueAmount'] ?? 0) as num).toInt();
+      }
+    } catch (_) {}
     await _db.collection('payments').add({
       'userId': user.uid,
       'trxId': trxId,
       'amount': amount,
       'method': method,
       'status': 'pending',
+      'dueBefore': dueBefore,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
