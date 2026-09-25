@@ -25,6 +25,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   static const List<int> _monthOptions = [1, 2, 3, 6, 12];
 
+            static const List<String> _bnMonths = [
+              'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
+              'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
+            ];
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +73,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   int get _effectivePrice => (_packagePrice - _monthlyDiscount).clamp(0, 999999);
+
+            String get _paymentMonthLabel {
+              final now = DateTime.now();
+              if (_months == 1) {
+                return '${_bnMonths[now.month - 1]} ${now.year}';
+              }
+              final startMonth = _bnMonths[now.month - 1];
+              final endMonthIdx = (now.month + _months - 2) % 12;
+              final endYear = now.year + ((now.month + _months - 2) ~/ 12);
+              return '$startMonth ${now.year} - ${_bnMonths[endMonthIdx]} $endYear';
+            }
             int get _totalAmount => _months * _effectivePrice;
 
   Future<void> _copyNumber() async {
@@ -180,6 +196,48 @@ children: [
   _sectionTitle('কত মাসের বিল দিচ্ছেন?'),
   const SizedBox(height: 10),
   _monthChips(),
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: JC.cream,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: JC.creamDeep, width: 1.5),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: JC.primary.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.event_rounded,
+                                  color: JC.primary, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('এই পেমেন্টের জন্য',
+                                      style: GoogleFonts.hindSiliguri(
+                                          fontSize: 11,
+                                          color: JC.grey,
+                                          height: 1.4)),
+                                  Text(_paymentMonthLabel,
+                                      style: GoogleFonts.hindSiliguri(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: JC.ink,
+                                          height: 1.5)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
   const SizedBox(height: 20),
   _amountCard(),
   const SizedBox(height: 20),

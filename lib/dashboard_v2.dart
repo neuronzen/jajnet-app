@@ -288,42 +288,43 @@ Text(
 ),
 if ((_user?['monthlyDiscount'] ?? 0) is num && (_user?['monthlyDiscount'] ?? 0) > 0)
   Padding(
-    padding: const EdgeInsets.only(top: 2),
+    padding: const EdgeInsets.only(top: 4),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.22),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '🎁 ৳${_user?['monthlyDiscount']} ছাড়',
+            style: GoogleFonts.hindSiliguri(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                height: 1.4),
+          ),
+        ),
+      ],
+    ),
+  ),
+if (!isPaid && _currentMonthCharge > 0)
+  Padding(
+    padding: const EdgeInsets.only(top: 4),
     child: Text(
-      '🎁 ডিসকাউন্ট: ৳${_user?['monthlyDiscount']}/মাস',
+      'এই মাস ৳$_currentMonthCharge' +
+          (due > _currentMonthCharge
+              ? '  •  আগের ৳${NumberFormat('#,##0').format(due - _currentMonthCharge)}'
+              : ''),
       style: GoogleFonts.hindSiliguri(
-          fontSize: 12,
-          color: Colors.white.withOpacity(0.9),
+          fontSize: 12.5,
+          color: Colors.white.withOpacity(0.95),
+          fontWeight: FontWeight.w500,
           height: 1.5),
     ),
   ),
-if (!isPaid && _currentMonthCharge > 0) ...[
-  const SizedBox(height: 4),
-  Text(
-    'এই মাসের বিল: ৳$_currentMonthCharge',
-    style: GoogleFonts.hindSiliguri(
-        fontSize: 12,
-        color: Colors.white.withOpacity(0.9),
-        height: 1.5),
-  ),
-  if (due > _currentMonthCharge)
-    Text(
-      'আগের বাকি: ৳${NumberFormat('#,##0').format(due - _currentMonthCharge)}',
-      style: GoogleFonts.hindSiliguri(
-          fontSize: 12,
-          color: Colors.white.withOpacity(0.9),
-          height: 1.5),
-    ),
-],
-const SizedBox(height: 4),
-Text(
-  isPaid ? 'বিল স্ট্যাটাস: পরিশোধিত' : 'বিল স্ট্যাটাস: বাকি',
-  style: GoogleFonts.hindSiliguri(
-      fontSize: 13,
-      color: Colors.white.withOpacity(0.92),
-      fontWeight: FontWeight.w500,
-      height: 1.5),
-),
+
 const SizedBox(height: 16),
 Container(
   padding: const EdgeInsets.all(12),
