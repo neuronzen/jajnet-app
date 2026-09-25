@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'login.dart';
@@ -340,11 +341,57 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _i = 0;
+  StreamSubscription<DocumentSnapshot>? _userSub;
 
   @override
   void initState() {
     super.initState();
     _checkStatus();
+    _watchStatus();
+  }
+
+  void _watchStatus() {
+    final u = AuthService.currentUser;
+    if (u == null) return;
+    _userSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(u.uid)
+        .snapshots()
+        .listen((snap) {
+      if (!snap.exists) return;
+      final status = (snap.data()?['status'] ?? 'active').toString().toLowerCase();
+      if ((status == 'suspended' || status == 'deleted') && mounted) {
+        _kickOut(status);
+      }
+    });
+  }
+
+  Future<void> _kickOut(String status) async {
+    await _userSub?.cancel();
+    await AuthService.signOut();
+    if (!mounted) return;
+    final msg = status == 'suspended'
+        ? 'আপনার সংযোগ বন্ধ করা হয়েছে। সাপোর্টে যোগাযোগ করুন: ${AppInfo.helpline}'
+        : 'আপনার অ্যাকাউন্ট মুছে ফেলা হয়েছে।';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: GoogleFonts.hindSiliguri(height: 1.5)),
+        backgroundColor: JC.error,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 8),
+      ),
+    );
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreenNew()),
+    );
+  }
+
+  @override
+  void dispose() {
+    _userSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkStatus() async {
