@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 
 import 'splash.dart';
 import 'theme.dart';
+import 'notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await NotificationService.init();
   runApp(const JajNetApp());
 }
 
