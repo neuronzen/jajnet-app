@@ -140,7 +140,7 @@ jobs:
 
           android {
               namespace = "com.jajnet.customer"
-              compileSdk = 34
+              compileSdk = 35
               ndkVersion = flutter.ndkVersion
 
               compileOptions {

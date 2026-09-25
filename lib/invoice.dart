@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:gal/gal.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:intl/intl.dart';
