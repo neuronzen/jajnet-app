@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -27,10 +28,20 @@ class InvoiceService {
   }) async {
     final doc = pw.Document();
 
+    // Load Bengali fonts
+    final regularData = await rootBundle.load('assets/fonts/HindSiliguri-Regular.ttf');
+    final boldData = await rootBundle.load('assets/fonts/HindSiliguri-Bold.ttf');
+    final bengaliFont = pw.Font.ttf(regularData);
+    final bengaliBold = pw.Font.ttf(boldData);
+
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
+        theme: pw.ThemeData.withFont(
+          base: bengaliFont,
+          bold: bengaliBold,
+        ),
         build: (ctx) {
 return pw.Column(
   crossAxisAlignment: pw.CrossAxisAlignment.start,
