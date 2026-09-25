@@ -378,8 +378,21 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final pngBytes = byteData!.buffer.asUint8List();
 
-      final dir = await getTemporaryDirectory();
       final fileName = 'JAJNet_Invoice_${_invoiceNo.replaceAll('-', '_')}.png';
+      // Save to Downloads folder (visible in Gallery)
+      Directory dir;
+      if (Platform.isAndroid) {
+        dir = Directory('/storage/emulated/0/Download');
+        if (!await dir.exists()) {
+          dir = Directory('/storage/emulated/0/Downloads');
+        }
+        if (!await dir.exists()) {
+          dir = await getExternalStorageDirectory() ??
+              await getTemporaryDirectory();
+        }
+      } else {
+        dir = await getApplicationDocumentsDirectory();
+      }
       final file = File('${dir.path}/$fileName');
       await file.writeAsBytes(pngBytes);
 
