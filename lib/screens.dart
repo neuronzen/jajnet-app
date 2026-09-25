@@ -1038,6 +1038,26 @@ class ProfileTab extends StatelessWidget {
                               style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold)),
+                          if ((d['customerId'] ?? '').toString().isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: JC.primary.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                (d['customerId'] ?? '').toString(),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: JC.primary,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 2),
                           Text(d['phone'] ?? '',
                               style: const TextStyle(
@@ -1050,6 +1070,9 @@ class ProfileTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
+              if ((d['customerId'] ?? '').toString().isNotEmpty)
+                _row(Icons.badge_rounded, 'কাস্টমার আইডি',
+                    (d['customerId'] ?? '').toString()),
               _row(Icons.wifi, 'প্যাকেজ', d['package'] ?? '-'),
               _row(Icons.attach_money, 'মাসিক বিল',
                   '৳ ${d['packagePrice'] ?? '-'}'),

@@ -23,6 +23,7 @@ class _DashboardHomeState extends State<DashboardHome> {
   Map<String, dynamic>? _user;
   List<Map<String, dynamic>> _payments = [];
   List<Map<String, dynamic>> _notices = [];
+            int _currentMonthCharge = 0;
   bool _loading = true;
 
   static const List<String> _bnMonths = [
@@ -40,19 +41,26 @@ class _DashboardHomeState extends State<DashboardHome> {
     final u = AuthService.currentUser;
     if (u == null) return;
     try {
+      final now = DateTime.now();
+      final period = '${now.year}-${now.month.toString().padLeft(2, '0')}';
       final results = await Future.wait([
         FirebaseFirestore.instance
-  .collection('users')
-  .doc(u.uid)
-  .get(),
+            .collection('users')
+            .doc(u.uid)
+            .get(),
         FirebaseFirestore.instance
-  .collection('payments')
-  .where('userId', isEqualTo: u.uid)
-  .get(),
+            .collection('payments')
+            .where('userId', isEqualTo: u.uid)
+            .get(),
         FirebaseFirestore.instance
-  .collection('notices')
-  .limit(5)
-  .get(),
+            .collection('notices')
+            .limit(5)
+            .get(),
+        FirebaseFirestore.instance
+            .collection('billingRecords')
+            .where('userId', isEqualTo: u.uid)
+            .where('period', isEqualTo: period)
+            .get(),
       ]);
       final userDoc = results[0] as DocumentSnapshot;
       final paySnap = results[1] as QuerySnapshot;
@@ -74,11 +82,19 @@ class _DashboardHomeState extends State<DashboardHome> {
         return <String, dynamic>{'id': d.id, ...m};
       }).toList();
 
+      int currentMonthCharge = 0;
+      final billingSnap = results[3] as QuerySnapshot;
+      if (billingSnap.docs.isNotEmpty) {
+        final bm = billingSnap.docs.first.data() as Map<String, dynamic>;
+        currentMonthCharge = (bm['charge'] ?? 0) as int;
+      }
+
       if (!mounted) return;
       setState(() {
         _user = userDoc.data() as Map<String, dynamic>?;
         _payments = pays;
         _notices = nots.take(3).toList();
+        _currentMonthCharge = currentMonthCharge;
         _loading = false;
       });
     } catch (e) {
@@ -270,6 +286,24 @@ Text(
       color: Colors.white,
       height: 1.3),
 ),
+if (!isPaid && _currentMonthCharge > 0) ...[
+  const SizedBox(height: 4),
+  Text(
+    'এই মাসের বিল: ৳$_currentMonthCharge',
+    style: GoogleFonts.hindSiliguri(
+        fontSize: 12,
+        color: Colors.white.withOpacity(0.9),
+        height: 1.5),
+  ),
+  if (due > _currentMonthCharge)
+    Text(
+      'আগের বাকি: ৳${NumberFormat('#,##0').format(due - _currentMonthCharge)}',
+      style: GoogleFonts.hindSiliguri(
+          fontSize: 12,
+          color: Colors.white.withOpacity(0.9),
+          height: 1.5),
+    ),
+],
 const SizedBox(height: 4),
 Text(
   isPaid ? 'বিল স্ট্যাটাস: পরিশোধিত' : 'বিল স্ট্যাটাস: বাকি',
