@@ -33,3 +33,5 @@ flutter:
     - assets/fonts/HindSiliguri-Regular.ttf
     - assets/fonts/HindSiliguri-Bold.ttf
     - assets/fonts/HindSiliguri-SemiBold.ttf
+    - assets/fonts/NotoSansBengali-Regular.ttf
+    - assets/fonts/NotoSansBengali-Bold.ttf
