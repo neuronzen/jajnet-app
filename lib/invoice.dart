@@ -59,7 +59,7 @@ class InvoicePreviewScreen extends StatelessWidget {
     final remaining = total - paid;
 
     return Scaffold(
-      backgroundColor: JC.greyBg,
+      backgroundColor: JC.cream,
       appBar: AppBar(
         title: Text(
           'ইনভয়েস',
