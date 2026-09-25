@@ -9,7 +9,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:saver_gallery/saver_gallery.dart';
 
 import 'theme.dart';
 
@@ -403,46 +402,17 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
           text: 'JAJ Net ইনভয়েস — $_invoiceNo',
         );
       } else {
-        // Save to Gallery
-        try {
-          final result = await SaverGallery.saveImage(
-            pngBytes,
-            quality: 100,
-            fileName: fileName.replaceAll('.png', ''),
-            androidRelativePath: 'Pictures/JAJNet',
-            skipIfExists: false,
-          );
-          if (!mounted) return;
-          if (result.isSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('ছবি গ্যালারিতে সেভ হয়েছে',
-                    style: GoogleFonts.hindSiliguri(height: 1.5)),
-                backgroundColor: JC.success,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('সেভ করা যায়নি: ${result.errorMessage}',
-                    style: GoogleFonts.hindSiliguri(height: 1.5)),
-                backgroundColor: JC.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        } catch (e) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('সেভ করা যায়নি: $e',
-                  style: GoogleFonts.hindSiliguri(height: 1.5)),
-              backgroundColor: JC.error,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+        // Already saved to Downloads above
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download ফোল্ডারে সেভ হয়েছে: $fileName',
+                style: GoogleFonts.hindSiliguri(height: 1.5)),
+            backgroundColor: JC.success,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } catch (e) {
       if (!mounted) return;
