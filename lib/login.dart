@@ -8,7 +8,7 @@ import 'services.dart';
 import 'theme.dart';
 
 // ============================================================
-// NEW LOGIN SCREEN — "Mesh Aurora Premium"
+// LOGIN SCREEN — Premium ISP Atmosphere
 // ============================================================
 class LoginScreenNew extends StatefulWidget {
   const LoginScreenNew({super.key});
@@ -24,37 +24,26 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   bool _hide = true;
   bool _showCreds = false;
 
-  late final AnimationController _mesh;
-  late final AnimationController _ring;
-  late final AnimationController _logoPulse;
+  // Single subtle animation — atmosphere "breathing"
+  late final AnimationController _atmosphere;
   late final AnimationController _entrance;
 
   @override
   void initState() {
     super.initState();
-    _mesh = AnimationController(
+    _atmosphere = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 9),
+      duration: const Duration(seconds: 5),
     )..repeat(reverse: true);
-    _ring = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 22),
-    )..repeat();
-    _logoPulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2800),
-    )..repeat();
     _entrance = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 850),
+      duration: const Duration(milliseconds: 900),
     )..forward();
   }
 
   @override
   void dispose() {
-    _mesh.dispose();
-    _ring.dispose();
-    _logoPulse.dispose();
+    _atmosphere.dispose();
     _entrance.dispose();
     _email.dispose();
     _pass.dispose();
@@ -133,7 +122,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
         return Opacity(
           opacity: eased,
           child: Transform.translate(
-            offset: Offset(0, (1 - eased) * 18),
+            offset: Offset(0, (1 - eased) * 16),
             child: child,
           ),
         );
@@ -150,56 +139,95 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       backgroundColor: const Color(0xFFFBFBFC),
       body: Stack(
         children: [
-          // ==================== HEADER ====================
+          // ============ HERO ============
           Positioned(
             top: 0, left: 0, right: 0,
             height: headerH + 40,
             child: ClipPath(
               clipper: _HeaderClipper(),
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(0xFFC94400),
-                      Color(0xFFE55A00),
-                      Color(0xFFFF6B00),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Animated mesh gradient blobs
-                    Positioned.fill(child: _meshLayer()),
-                    // Rotating concentric ring
-                    Positioned.fill(child: _rotatingRing()),
-                    // Diagonal gold lines
-                    Positioned.fill(child: _diagonalLines()),
-                    // Center content
-                    Positioned.fill(
-                      child: SafeArea(
-                        bottom: false,
-                        child: Padding(
-                          padding: EdgeInsets.only(bottom: headerH * 0.16),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _fade(_logoWithPulse(), 0.05),
-                              const SizedBox(height: 22),
-                              _fade(_brandBlock(), 0.20),
-                            ],
-                          ),
+              child: Stack(
+                children: [
+                  // 1. Base gradient (deep → mid orange, no yellow)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFFB84200),
+                            Color(0xFFD95200),
+                            Color(0xFFE96615),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          stops: [0.0, 0.55, 1.0],
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  // 2. Radial highlight (top-right, subtle)
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          colors: [
+                            const Color(0xFFFFB880).withOpacity(0.16),
+                            Colors.transparent,
+                          ],
+                          center: const Alignment(0.90, -0.90),
+                          radius: 1.1,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // 3. Soft bottom vignette for depth
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            const Color(0xFF6B2400).withOpacity(0.12),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // 4. Signal atmosphere (subtle network theme)
+                  Positioned.fill(
+                    child: AnimatedBuilder(
+                      animation: _atmosphere,
+                      builder: (_, __) => CustomPaint(
+                        painter: _AtmospherePainter(
+                          breath: _atmosphere.value,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // 5. Content
+                  Positioned.fill(
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: headerH * 0.16),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _fade(_logoBlock(), 0.05),
+                            const SizedBox(height: 24),
+                            _fade(_brandBlock(), 0.20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
 
-          // ==================== BODY ====================
+          // ============ BODY (unchanged) ============
           Positioned(
             top: headerH,
             left: 0, right: 0, bottom: 0,
@@ -282,20 +310,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                     _fade(_loginButton(), 0.56),
                     const SizedBox(height: 20),
                     _fade(_credentialsCard(), 0.66),
-                    const SizedBox(height: 26),
-                    _fade(
-                      Center(
-                        child: Text(
-                          'সংস্করণ ১.০.০',
-                          style: GoogleFonts.hindSiliguri(
-                            fontSize: 10.5,
-                            color: const Color(0xFFB0B7C3),
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                      0.76,
-                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -306,201 +321,72 @@ class _LoginScreenNewState extends State<LoginScreenNew>
     );
   }
 
-  // ============ MESH GRADIENT ============
-  Widget _meshLayer() {
-    return AnimatedBuilder(
-      animation: _mesh,
-      builder: (_, __) {
-        final t = _mesh.value;
-        final r = t * math.pi * 2;
-        return Stack(
-          children: [
-            // Gold blob
-            Positioned(
-              left: -60 + 40 * math.sin(r),
-              top: -40 + 30 * math.cos(r),
-              child: _radialBlob(
-                260,
-                const Color(0xFFFFB547).withOpacity(0.28),
-              ),
-            ),
-            // Deep navy hint
-            Positioned(
-              right: -80 + 50 * math.cos(r + 2),
-              bottom: -60 + 40 * math.sin(r + 2),
-              child: _radialBlob(
-                240,
-                const Color(0xFF0F172A).withOpacity(0.28),
-              ),
-            ),
-            // Light orange
-            Positioned(
-              right: 40 + 40 * math.sin(r + 1),
-              top: 20 + 30 * math.cos(r + 1),
-              child: _radialBlob(
-                220,
-                const Color(0xFFFF9F5A).withOpacity(0.32),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _radialBlob(double size, Color color) {
+  // ============ LOGO — clean, integrated ============
+  Widget _logoBlock() {
     return Container(
-      width: size,
-      height: size,
+      width: 92,
+      height: 92,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [color, color.withOpacity(0.0)],
-        ),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          // Warm ambient shadow below
+          BoxShadow(
+            color: const Color(0xFF6B2400).withOpacity(0.28),
+            blurRadius: 32,
+            spreadRadius: -4,
+            offset: const Offset(0, 16),
+          ),
+          // Tight contact shadow
+          BoxShadow(
+            color: const Color(0xFF6B2400).withOpacity(0.14),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // White rounded square with very subtle warm tint at bottom
+          Container(
+            width: 92,
+            height: 92,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFFFFF), Color(0xFFFFFCF8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.6),
+                width: 1,
+              ),
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.wifi_rounded,
+                size: 40,
+                color: JC.primary,
+              ),
+            ),
+          ),
+          // Top-edge inner highlight (glass-like catch of light)
+          Positioned(
+            top: 0, left: 22, right: 22,
+            child: Container(
+              height: 1.4,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // ============ ROTATING RING ============
-  Widget _rotatingRing() {
-    return AnimatedBuilder(
-      animation: _ring,
-      builder: (_, __) {
-        return Stack(
-          children: [
-            // Static outer ring
-            Positioned(
-              top: -90, right: -60,
-              child: Container(
-                width: 230,
-                height: 230,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.14),
-                    width: 1.4,
-                  ),
-                ),
-              ),
-            ),
-            // Rotating inner ring (partial arc — dashed look)
-            Positioned(
-              top: -60, right: -35,
-              child: Transform.rotate(
-                angle: _ring.value * 2 * math.pi,
-                child: Container(
-                  width: 175,
-                  height: 175,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFFFB547).withOpacity(0.55),
-                      width: 1.6,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // ============ DIAGONAL LINES ============
-  Widget _diagonalLines() {
-    return AnimatedBuilder(
-      animation: _mesh,
-      builder: (_, __) {
-        final t = _mesh.value;
-        return Stack(
-          children: List.generate(3, (i) {
-            final xOffset = (t - 0.5) * 30 + (i * 12);
-            return Positioned(
-              bottom: 90 - i * 14,
-              left: -80 + xOffset,
-              child: Transform.rotate(
-                angle: -0.35,
-                child: Container(
-                  width: 260,
-                  height: 1.2,
-                  color: const Color(0xFFFFB547).withOpacity(0.22),
-                ),
-              ),
-            );
-          }),
-        );
-      },
-    );
-  }
-
-  // ============ LOGO WITH PULSE ============
-  Widget _logoWithPulse() {
-    return AnimatedBuilder(
-      animation: _logoPulse,
-      builder: (_, __) {
-        final p = _logoPulse.value;
-        return SizedBox(
-          width: 132,
-          height: 132,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Expanding ring
-              Transform.scale(
-                scale: 0.85 + p * 0.18,
-                child: Container(
-                  width: 132, height: 132,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.45 * (1 - p)),
-                      width: 1.8,
-                    ),
-                  ),
-                ),
-              ),
-              // Frosted glass outer
-              Container(
-                width: 92,
-                height: 92,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.15),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.20),
-                    width: 1,
-                  ),
-                ),
-              ),
-              // Solid logo box
-              Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0F172A).withOpacity(0.28),
-                      blurRadius: 22,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.wifi_rounded,
-                  size: 38,
-                  color: JC.primary,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
+  // ============ BRAND BLOCK — refined hierarchy ============
   Widget _brandBlock() {
     return Column(
       children: [
@@ -508,37 +394,39 @@ class _LoginScreenNewState extends State<LoginScreenNew>
           'JAJ Net',
           textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
-            fontSize: 27,
+            fontSize: 28,
             fontWeight: FontWeight.w800,
             color: Colors.white,
-            letterSpacing: 1.6,
+            letterSpacing: 2.0,
             height: 1.2,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
+        // Thin refined divider
         Container(
-          width: 42,
-          height: 3,
+          width: 30,
+          height: 2,
           decoration: BoxDecoration(
-            color: const Color(0xFFFFB547),
+            color: Colors.white.withOpacity(0.65),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Text(
           'তৈরি হোক নিরবিচ্ছিন্ন সম্পর্ক',
           textAlign: TextAlign.center,
           style: GoogleFonts.hindSiliguri(
             fontSize: 12.5,
-            color: Colors.white.withOpacity(0.95),
+            color: Colors.white.withOpacity(0.88),
             height: 1.5,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
     );
   }
 
-  // ============ CARD LIFT FIELD ============
+  // ============ FIELDS (unchanged) ============
   Widget _liftField({
     required TextEditingController controller,
     required String label,
@@ -825,7 +713,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
 }
 
 // ============================================================
-// WAVE CLIPPER
+// HEADER CLIPPER (wave curve — retained)
 // ============================================================
 class _HeaderClipper extends CustomClipper<Path> {
   @override
@@ -845,6 +733,59 @@ class _HeaderClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+// ============================================================
+// ATMOSPHERE PAINTER — subtle connectivity theme
+// ============================================================
+class _AtmospherePainter extends CustomPainter {
+  final double breath; // 0.0 → 1.0
+
+  _AtmospherePainter({required this.breath});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Signal source — behind logo
+    final center = Offset(size.width * 0.5, size.height * 0.42);
+
+    // ---- Two extremely faint concentric rings ----
+    // Inner ring
+    final innerPaint = Paint()
+      ..color = Colors.white.withOpacity(0.055 + breath * 0.020)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawCircle(center, 105, innerPaint);
+
+    // Outer ring — even fainter
+    final outerPaint = Paint()
+      ..color = Colors.white.withOpacity(0.032 + breath * 0.015)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.9;
+    canvas.drawCircle(center, 165, outerPaint);
+
+    // ---- One soft diagonal light streak (top-left direction) ----
+    final trail = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          Colors.transparent,
+          Colors.white.withOpacity(0.055 + breath * 0.015),
+          Colors.transparent,
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..strokeWidth = 0.8;
+    canvas.drawLine(
+      Offset(size.width * 0.12, 0),
+      Offset(size.width * 0.30, size.height * 0.85),
+      trail,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _AtmospherePainter oldDelegate) {
+    return oldDelegate.breath != breath;
+  }
 }
 
 // ============================================================
