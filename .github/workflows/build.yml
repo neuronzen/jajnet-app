@@ -119,6 +119,13 @@ jobs:
       - name: Write app build.gradle
         run: |
           cat > android/app/build.gradle << 'EOF'
+          // Legacy properties for older plugins (like gal)
+          ext {
+              compileSdkVersion = 34
+              minSdkVersion = 21
+              targetSdkVersion = 34
+          }
+
           plugins {
               id "com.android.application"
               id "kotlin-android"
