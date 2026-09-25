@@ -119,19 +119,19 @@ jobs:
       - name: Write app build.gradle
         run: |
           cat > android/app/build.gradle << 'EOF'
-          // Legacy properties for older plugins (like gal)
-          ext {
-              compileSdkVersion = 34
-              minSdkVersion = 21
-              targetSdkVersion = 34
-          }
-
           plugins {
               id "com.android.application"
               id "kotlin-android"
               id "dev.flutter.flutter-gradle-plugin"
               id "com.google.gms.google-services"
           }
+
+          // Legacy ext so older plugins (gal) can find compileSdkVersion
+          ext.flutter = [
+              compileSdkVersion: 34,
+              minSdkVersion: 21,
+              targetSdkVersion: 34
+          ]
 
           def localProperties = new Properties()
           def localPropertiesFile = rootProject.file("local.properties")
