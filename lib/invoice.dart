@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:gal/gal.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -551,24 +551,23 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       final bytes = await _captureImage();
       final fileName = 'JAJNet_${_invoiceNo.replaceAll('-', '_')}';
 
-      // Check permission
-      final hasAccess = await Gal.hasAccess();
-      if (!hasAccess) {
-        await Gal.requestAccess();
-      }
-
-      await Gal.putImageBytes(
+      final result = await ImageGallerySaverPlus.saveImage(
         bytes,
+        quality: 100,
         name: fileName,
-        album: 'JAJ Net',
       );
 
       if (!mounted) return;
+      final success = result != null && result['isSuccess'] == true;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('গ্যালারিতে "JAJ Net" অ্যালবামে সেভ হয়েছে',
-              style: GoogleFonts.hindSiliguri(height: 1.5)),
-          backgroundColor: JC.success,
+          content: Text(
+            success
+                ? 'ইনভয়েস গ্যালারিতে সেভ হয়েছে'
+                : 'সেভ করা যায়নি',
+            style: GoogleFonts.hindSiliguri(height: 1.5),
+          ),
+          backgroundColor: success ? JC.success : JC.error,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
         ),
