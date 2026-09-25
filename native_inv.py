@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+new_invoice = '''import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -32,7 +32,7 @@ class InvoicePreviewScreen extends StatelessWidget {
     final short = trx.length >= 4
         ? trx.substring(0, 4).toUpperCase()
         : trx.padRight(4, '0').toUpperCase();
-    return 'JAJ-$ymd-$short';
+    return 'JAJ-\$ymd-\$short';
   }
 
   String _billingPeriod() {
@@ -42,7 +42,7 @@ class InvoicePreviewScreen extends StatelessWidget {
     final end = DateTime(start.year, start.month + 1, start.day)
         .subtract(const Duration(days: 1));
     final fmt = DateFormat('dd MMM');
-    return '${fmt.format(start)} – ${fmt.format(end)} ${start.year}';
+    return '\${fmt.format(start)} – \${fmt.format(end)} \${start.year}';
   }
 
   String _fmtDate(DateTime d) => DateFormat('dd MMM yyyy').format(d);
@@ -427,24 +427,24 @@ class InvoicePreviewScreen extends StatelessWidget {
     buf.writeln('*JAJ Net — Invoice*');
     buf.writeln('তৈরি হোক নিরবিচ্ছিন্ন সম্পর্ক');
     buf.writeln('');
-    buf.writeln('Invoice No: $invoiceNo');
-    buf.writeln('Customer ID: ${user['customerId'] ?? 'N/A'}');
-    buf.writeln('নাম: ${user['name'] ?? ''}');
-    buf.writeln('মোবাইল: ${user['phone'] ?? ''}');
+    buf.writeln('Invoice No: \$invoiceNo');
+    buf.writeln('Customer ID: \${user['customerId'] ?? 'N/A'}');
+    buf.writeln('নাম: \${user['name'] ?? ''}');
+    buf.writeln('মোবাইল: \${user['phone'] ?? ''}');
     if ((user['address'] ?? '').toString().isNotEmpty) {
-      buf.writeln('ঠিকানা: ${user['address']}');
+      buf.writeln('ঠিকানা: \${user['address']}');
     }
     buf.writeln('');
-    buf.writeln('প্যাকেজ: ${user['package'] ?? ''}');
-    buf.writeln('Billing Period: ${_billingPeriod()}');
+    buf.writeln('প্যাকেজ: \${user['package'] ?? ''}');
+    buf.writeln('Billing Period: \${_billingPeriod()}');
     buf.writeln('');
-    buf.writeln('Total Due: ৳$total');
-    buf.writeln('Paid: ৳$paid');
-    buf.writeln('Remaining: ৳$remaining');
+    buf.writeln('Total Due: ৳\$total');
+    buf.writeln('Paid: ৳\$paid');
+    buf.writeln('Remaining: ৳\$remaining');
     buf.writeln('');
-    buf.writeln('Payment: ${payment['method'] ?? 'bKash'}');
-    buf.writeln('TrxID: ${payment['trxId'] ?? 'N/A'}');
-    buf.writeln('Status: ${(payment['status'] ?? 'pending').toString().toUpperCase()}');
+    buf.writeln('Payment: \${payment['method'] ?? 'bKash'}');
+    buf.writeln('TrxID: \${payment['trxId'] ?? 'N/A'}');
+    buf.writeln('Status: \${(payment['status'] ?? 'pending').toString().toUpperCase()}');
     buf.writeln('');
     buf.writeln('JAJ Net • Podoharbaid, Gazipur');
     buf.writeln('Support: 01639482397');
@@ -466,3 +466,9 @@ class InvoicePreviewScreen extends StatelessWidget {
     Share.share(text, subject: 'JAJ Net Invoice');
   }
 }
+'''
+
+with open('lib/invoice.dart', 'w') as f:
+    f.write(new_invoice)
+print("✓ invoice.dart converted to native Flutter widget")
+print("DONE")
