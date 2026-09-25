@@ -280,8 +280,10 @@ jobs:
       - name: Decode Keystore
         run: |
           mkdir -p android/keystore
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/keystore/jajnet-release.jks
+          # Strip all whitespace/newlines/spaces then decode
+          printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | tr -d ' \t\n\r' | base64 -d > android/keystore/jajnet-release.jks
           ls -lh android/keystore/
+          file android/keystore/jajnet-release.jks
 
       - name: Create key.properties
         run: |
