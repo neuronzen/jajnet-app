@@ -274,9 +274,8 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Color(0xFF0A1420),
-                      Color(0xFF0F1F33),
-                      Color(0xFF0A1A2E),
+                      Color(0xFFFFFFFF),
+                      Color(0xFFEAF4FB),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -284,8 +283,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                 ),
                 child: Stack(
                   children: [
-                    // Aurora blobs
-                    Positioned.fill(child: _auroraLayer()),
+                    // (aurora removed — pure water look)
                     // (diagonal gold lines removed — jar aesthetic)
                     // Water waves layer
                     Positioned.fill(child: _waterLayer()),
@@ -299,9 +297,9 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                             final h = constraints.maxHeight;
                             return Stack(
                               children: [
-                                // Logo floats at water surface (55% of jar)
+                                // Logo floats ON water surface line (55%)
                                 Positioned(
-                                  top: h * 0.55 - 90,
+                                  top: h * 0.55 - 100,
                                   left: 0,
                                   right: 0,
                                   child: _fade(
@@ -309,7 +307,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                                     0.0,
                                   ),
                                 ),
-                                // Brand text sits inside water
+                                // Brand text INSIDE water (below surface)
                                 Positioned(
                                   top: h * 0.62,
                                   left: 0,
