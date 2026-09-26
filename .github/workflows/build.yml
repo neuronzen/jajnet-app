@@ -231,8 +231,14 @@ jobs:
       - name: Place google-services.json
         run: cp google-services.json android/app/google-services.json
 
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Generate Launcher Icons
+        run: dart run flutter_launcher_icons
+
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
