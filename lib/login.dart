@@ -50,6 +50,10 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   double _logoX = 0;
   double _logoXVel = 0;
 
+  // For tilt-velocity wave generation
+  double _lastGx = 0;
+  double _lastGy = 9.8;
+
   // Physics ticker
   late final Ticker _ticker;
   Duration _lastTick = Duration.zero;
@@ -113,8 +117,8 @@ class _LoginScreenNewState extends State<LoginScreenNew>
     final targetAngle = math.atan2(_gx, safeGy);
 
     // Spring-damper — inertia, overshoot, oscillation
-    const kSpring = 30.0;
-    const cDamp = 2.2;
+    const kSpring = 50.0;
+    const cDamp = 2.6;
     final aAccel =
         (targetAngle - _surfaceAngle) * kSpring - _surfaceVel * cDamp;
     _surfaceVel += aAccel * dt;
@@ -144,16 +148,24 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       _accelSub = accelerometerEventStream().listen(
         (event) {
           // Heavy low-pass — keep slow tilt, discard shake noise
-          _gx = _gx * 0.90 + event.x * 0.10;
-          _gy = _gy * 0.90 + event.y * 0.10;
+          _gx = _gx * 0.75 + event.x * 0.25;
+          _gy = _gy * 0.75 + event.y * 0.25;
 
           // Shake detection from raw magnitude deviation
           final mag = math.sqrt(event.x * event.x +
               event.y * event.y + event.z * event.z);
           final deviation = (mag - 9.8).abs();
-          if (deviation > 0.5) {
+          if (deviation > 0.3) {
             _waveEnergy =
-                math.min(_waveEnergy + deviation * 0.018, 2.5);
+                math.min(_waveEnergy + deviation * 0.030, 3.0);
+          }
+          // Tilt velocity also creates waves (sloshing)
+          final tiltVel = (_gx - _lastGx).abs() + (_gy - _lastGy).abs();
+          _lastGx = _gx;
+          _lastGy = _gy;
+          if (tiltVel > 0.4) {
+            _waveEnergy =
+                math.min(_waveEnergy + tiltVel * 0.015, 3.0);
           }
         },
         onError: (_) {},
