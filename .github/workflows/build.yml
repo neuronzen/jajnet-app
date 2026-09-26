@@ -231,6 +231,27 @@ jobs:
       - name: Place google-services.json
         run: cp google-services.json android/app/google-services.json
 
+      - name: Generate Padded App Icon
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq imagemagick
+          mkdir -p assets/icon
+          # Get max dimension and add 25% padding on white background
+          W=$(identify -format "%w" assets/logo/jajnet-logo.png)
+          H=$(identify -format "%h" assets/logo/jajnet-logo.png)
+          MAX=$W
+          if [ $H -gt $MAX ]; then MAX=$H; fi
+          CANVAS=$((MAX * 125 / 100))
+          convert assets/logo/jajnet-logo.png \
+            -resize ${MAX}x${MAX} \
+            -background white \
+            -gravity center \
+            -extent ${CANVAS}x${CANVAS} \
+            assets/icon/app_icon_padded.png
+          echo "Original: ${W}x${H}"
+          echo "Padded canvas: ${CANVAS}x${CANVAS}"
+          ls -lh assets/icon/
+
       - name: Flutter pub get
         run: flutter pub get
 

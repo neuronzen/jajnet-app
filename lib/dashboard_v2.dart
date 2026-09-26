@@ -209,8 +209,18 @@ decoration: BoxDecoration(
     ),
   ],
 ),
-child: const Icon(Icons.wifi_rounded,
-    color: Colors.white, size: 24),
+child: Padding(
+  padding: const EdgeInsets.all(6),
+  child: Image.asset(
+    'assets/logo/jajnet-logo.png',
+    fit: BoxFit.contain,
+    errorBuilder: (_, __, ___) => const Icon(
+      Icons.wifi_rounded,
+      color: Colors.white,
+      size: 24,
+    ),
+  ),
+),
         ),
       ],
     );

@@ -142,8 +142,18 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Icon(Icons.wifi_rounded,
-                                      color: Color(0xFFFF6B00), size: 20),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(5),
+                                    child: Image.asset(
+                                      'assets/logo/jajnet-logo.png',
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.wifi_rounded,
+                                        color: Color(0xFFFF6B00),
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
