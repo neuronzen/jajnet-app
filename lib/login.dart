@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'screens.dart';
 import 'services.dart';
+import 'water_sim.dart';
 import 'theme.dart';
 
 class LoginScreenNew extends StatefulWidget {
@@ -34,33 +35,17 @@ class _LoginScreenNewState extends State<LoginScreenNew>
 
   StreamSubscription? _accelSub;
 
-  // Filtered gravity vector (heavy low-pass)
+  // Filtered tilt input (from accelerometer)
   double _gx = 0;
   double _gy = 9.8;
 
-  // Water surface angle (radians) — spring-damper output
-  double _surfaceAngle = 0;
-  double _surfaceVel = 0;
-
-  // Wave energy (0 calm, 1+ sloshing)
-  double _waveEnergy = 0;
-  double _wavePhase = 0;
-
-  // Floating logo drift (buoy position + velocity)
-  double _logoX = 0;
-  double _logoXVel = 0;
-
-  // For tilt-velocity wave generation
-  double _lastGx = 0;
-  double _lastGy = 9.8;
+  // Real water simulation
+  final WaterSim _water = WaterSim();
 
   // Physics ticker
   late final Ticker _ticker;
   Duration _lastTick = Duration.zero;
   final ValueNotifier<int> _repaint = ValueNotifier<int>(0);
-
-  // Water shader program
-  ui.FragmentProgram? _waterProgram;
 
   @override
   void initState() {
@@ -84,88 +69,36 @@ class _LoginScreenNewState extends State<LoginScreenNew>
 
     _ticker = createTicker(_onPhysicsTick)..start();
     _startSensors();
-    _loadWaterShader();
   }
 
-  Future<void> _loadWaterShader() async {
-    try {
-      final program =
-          await ui.FragmentProgram.fromAsset('shaders/water.frag');
-      if (mounted) {
-        setState(() => _waterProgram = program);
-      }
-    } catch (e) {
-      debugPrint('water shader load error: $e');
-    }
-  }
+
 
   void _onPhysicsTick(Duration elapsed) {
     if (_lastTick == Duration.zero) {
       _lastTick = elapsed;
       return;
     }
-    double dt = (elapsed - _lastTick).inMicroseconds / 1e6;
+    final dt = (elapsed - _lastTick).inMicroseconds / 1e6;
     _lastTick = elapsed;
     if (dt <= 0 || dt > 0.1) {
       _repaint.value++;
       return;
     }
-    dt = dt.clamp(0.001, 0.05);
-
-    // === WATER SURFACE PHYSICS ===
-    // Target angle: water stays perpendicular to gravity.
-    final safeGy = _gy.abs() < 0.5 ? (_gy >= 0 ? 0.5 : -0.5) : _gy;
-    final targetAngle = math.atan2(-_gx, safeGy);
-
-    // Under-damped spring → real sloshing with overshoot
-    // ζ = c/(2*sqrt(k)) ≈ 0.18 → 2-3 oscillations before settling
-    const kSpring = 38.0;
-    const cDamp = 2.2;
-    final aAccel = (targetAngle - _surfaceAngle) * kSpring
-                 - _surfaceVel * cDamp;
-    _surfaceVel += aAccel * dt;
-    _surfaceAngle += _surfaceVel * dt;
-
-    // Wave energy decays like real ripples
-    _waveEnergy *= math.pow(0.94, dt * 60).toDouble();
-    if (_waveEnergy < 0.005) _waveEnergy = 0;
-
-    // === LOGO BUOY DRIFT ===
-    final slope = math.tan(_surfaceAngle.clamp(-1.2, 1.2));
-    final targetX = slope * 100.0;
-    const kLogoSpring = 16.0;
-    const cLogoDamp = 2.2;
-    final aX = (targetX - _logoX) * kLogoSpring - _logoXVel * cLogoDamp;
-    _logoXVel += aX * dt;
-    _logoX += _logoXVel * dt;
-
-    _wavePhase += dt * 5.0;
+    // Feed normalized tilt to real water simulation
+    final tiltGx = (_gx / 9.8).clamp(-1.0, 1.0);
+    _water.step(dt, tiltGx);
     _repaint.value++;
   }
 
   void _startSensors() {
     try {
       _accelSub = accelerometerEventStream(
-        samplingPeriod: SensorInterval.gameInterval,
+        samplingPeriod: SensorInterval.uiInterval,
       ).listen(
         (event) {
-          // Responsive filter — smooth but follows tilt quickly
-          _gx = _gx * 0.55 + event.x * 0.45;
-          _gy = _gy * 0.55 + event.y * 0.45;
-
-          // Shake detection — total magnitude deviation from gravity
-          final mag = math.sqrt(event.x * event.x +
-              event.y * event.y + event.z * event.z);
-          final deviation = (mag - 9.8).abs();
-
-          if (deviation > 0.6) {
-            // Inject angular velocity — THIS is what makes real water slosh.
-            // The surface itself starts rotating, not just ripples.
-            final dir = event.x >= 0 ? 1.0 : -1.0;
-            final impulse = math.min(deviation * 1.4, 7.0);
-            _surfaceVel += dir * impulse;
-            _waveEnergy = math.min(_waveEnergy + deviation * 0.4, 2.8);
-          }
+          // Mild filter — keep response quick but remove jitter
+          _gx = _gx * 0.65 + event.x * 0.35;
+          _gy = _gy * 0.65 + event.y * 0.35;
         },
         onError: (_) {},
         cancelOnError: false,
@@ -439,20 +372,13 @@ class _LoginScreenNewState extends State<LoginScreenNew>
 
   // ============ LIQUID LAYER (real water physics) ============
   Widget _waterLayer() {
-    final program = _waterProgram;
-    if (program == null) {
-      return const SizedBox.shrink();
-    }
     return AnimatedBuilder(
       animation: _repaint,
       builder: (_, __) {
         return CustomPaint(
-          painter: _ShaderWaterPainter(
-            program: program,
-            surfaceAngle: _surfaceAngle,
-            waveEnergy: _waveEnergy,
-            wavePhase: _wavePhase,
-            tiltY: (_gy - 9.8) / 9.8,
+          painter: _SurfacePainter(
+            heights: List<double>.from(_water.pos),
+            time: DateTime.now().millisecondsSinceEpoch / 1000.0,
           ),
         );
       },
@@ -471,12 +397,12 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       animation: Listenable.merge([_bob, _repaint]),
       builder: (_, __) {
         final t = _bob.value * math.pi * 2;
-        final bobAmp = 4.5 + _waveEnergy.clamp(0.0, 1.0) * 7.0;
+        final energy = (_water.energy / 4.0).clamp(0.0, 1.0);
+        final bobAmp = 4.0 + energy * 6.0;
         final bob = math.sin(t) * bobAmp;
-        // Logo drifts along water surface (buoy physics)
-        final tiltDx = _logoX;
-        final tiltDy = -(_gy - 9.8) * 1.5;
-        final rot = _surfaceAngle * 0.9;
+        final tiltDx = _gx * 3.2;
+        final tiltDy = -(_gy - 9.8) * 1.2;
+        final rot = _gx * 0.05;
 
         return Transform.translate(
           offset: Offset(tiltDx, bob + tiltDy),
@@ -501,8 +427,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                     shape: BoxShape.circle,
                     color: Colors.white.withOpacity(0.15),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.22),
-                      width: 1.2),
+                      color: Colors.white.withOpacity(0.22), width: 1.2),
                   ),
                   child: Center(
                     child: Container(
@@ -978,6 +903,146 @@ class _ShaderWaterPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ShaderWaterPainter old) => true;
+}
+
+// ===== SURFACE PAINTER — renders real water surface =====
+class _SurfacePainter extends CustomPainter {
+  final List<double> heights;
+  final double time;
+
+  _SurfacePainter({required this.heights, required this.time});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final n = heights.length;
+    if (n < 2) return;
+    final baseY = size.height * 0.55;
+
+    double px(int i) => (i / (n - 1)) * size.width;
+    double py(int i) => baseY - heights[i];
+
+    // Build surface path with quadratic smoothing
+    final surfacePath = Path();
+    surfacePath.moveTo(px(0), py(0));
+    for (int i = 1; i < n - 1; i++) {
+      final cx = (px(i) + px(i + 1)) / 2;
+      final cy = (py(i) + py(i + 1)) / 2;
+      surfacePath.quadraticBezierTo(px(i), py(i), cx, cy);
+    }
+    surfacePath.lineTo(px(n - 1), py(n - 1));
+
+    // Water body fill
+    final bodyPath = Path.from(surfacePath);
+    bodyPath.lineTo(size.width, size.height);
+    bodyPath.lineTo(0, size.height);
+    bodyPath.close();
+
+    final waterShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: const [
+        Color(0xFFCDE8F5),
+        Color(0xFF7CB6D9),
+        Color(0xFF2E6F9E),
+        Color(0xFF123D63),
+      ],
+      stops: const [0.0, 0.35, 0.75, 1.0],
+    ).createShader(Rect.fromLTWH(0, baseY - 70, size.width, size.height));
+
+    canvas.drawPath(bodyPath, Paint()..shader = waterShader);
+
+    // Caustics — soft moving light blobs under surface
+    for (int i = 0; i < 6; i++) {
+      final t = i / 6.0;
+      final cx = size.width * (t + 0.08) +
+          math.sin(time * 0.6 + i * 1.7) * 40;
+      final cy = baseY + 40 + i * 22 +
+          math.cos(time * 0.4 + i) * 14;
+      final r = 30.0 + (i % 3) * 24;
+      canvas.drawCircle(
+        Offset(cx, cy),
+        r,
+        Paint()
+          ..shader = RadialGradient(colors: [
+            Colors.white.withOpacity(0.10),
+            Colors.white.withOpacity(0.0),
+          ]).createShader(Rect.fromCircle(center: Offset(cx, cy), radius: r)),
+      );
+    }
+
+    // Rising bubbles
+    for (int i = 0; i < 8; i++) {
+      final bx = size.width * (i + 0.5) / 8.0 +
+          math.sin(time * 0.7 + i * 2.3) * 18;
+      final phase = ((time * 0.18 + i * 0.13) % 1.0);
+      final xi = ((bx / size.width) * (n - 1)).round().clamp(0, n - 1);
+      final sy = py(xi);
+      final by = sy + 30 + (1 - phase) * (size.height - sy - 30);
+      final r = 1.8 + (i % 3) * 1.0;
+      canvas.drawCircle(
+        Offset(bx, by),
+        r,
+        Paint()
+          ..color = Colors.white.withOpacity(0.30 * (1 - phase))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.9,
+      );
+    }
+
+    // Dark band just below surface (real water signature)
+    final darkBand = Path.from(surfacePath);
+    darkBand.lineTo(size.width, baseY + 20);
+    darkBand.lineTo(0, baseY + 20);
+    darkBand.close();
+    canvas.save();
+    canvas.clipPath(darkBand);
+    canvas.drawRect(
+      Rect.fromLTWH(0, baseY - 20, size.width, 60),
+      Paint()
+        ..color = const Color(0xFF4A8FC0).withOpacity(0.22)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+    );
+    canvas.restore();
+
+    // Surface line — layered glow
+    canvas.drawPath(surfacePath,
+        Paint()
+          ..color = Colors.white.withOpacity(0.35)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 16
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9));
+    canvas.drawPath(surfacePath,
+        Paint()
+          ..color = Colors.white.withOpacity(0.75)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+    canvas.drawPath(surfacePath,
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.4);
+
+    // Moving specular glints on surface
+    for (int i = 0; i < 3; i++) {
+      final gx = size.width * (0.25 + i * 0.25) +
+          math.sin(time * 1.2 + i * 2) * 30;
+      final xi = ((gx / size.width) * (n - 1)).round().clamp(0, n - 1);
+      final gy = py(xi) - 2;
+      canvas.drawCircle(
+        Offset(gx, gy),
+        5.5,
+        Paint()
+          ..shader = RadialGradient(colors: [
+            Colors.white.withOpacity(0.85),
+            Colors.white.withOpacity(0.0),
+          ]).createShader(Rect.fromCircle(center: Offset(gx, gy), radius: 5.5)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SurfacePainter old) => true;
 }
 
 // ===== SIGNUP (unchanged) =====
