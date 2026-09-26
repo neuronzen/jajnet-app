@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -50,6 +51,9 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   Duration _lastTick = Duration.zero;
   final ValueNotifier<int> _repaint = ValueNotifier<int>(0);
 
+  // Water shader program
+  ui.FragmentProgram? _waterProgram;
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +76,19 @@ class _LoginScreenNewState extends State<LoginScreenNew>
 
     _ticker = createTicker(_onPhysicsTick)..start();
     _startSensors();
+    _loadWaterShader();
+  }
+
+  Future<void> _loadWaterShader() async {
+    try {
+      final program =
+          await ui.FragmentProgram.fromAsset('shaders/water.frag');
+      if (mounted) {
+        setState(() => _waterProgram = program);
+      }
+    } catch (e) {
+      debugPrint('water shader load error: $e');
+    }
   }
 
   void _onPhysicsTick(Duration elapsed) {
@@ -395,14 +412,20 @@ class _LoginScreenNewState extends State<LoginScreenNew>
 
   // ============ LIQUID LAYER (real water physics) ============
   Widget _waterLayer() {
+    final program = _waterProgram;
+    if (program == null) {
+      return const SizedBox.shrink();
+    }
     return AnimatedBuilder(
       animation: _repaint,
       builder: (_, __) {
         return CustomPaint(
-          painter: _LiquidPainter(
+          painter: _ShaderWaterPainter(
+            program: program,
             surfaceAngle: _surfaceAngle,
             waveEnergy: _waveEnergy,
             wavePhase: _wavePhase,
+            tiltY: (_gy - 9.8) / 9.8,
           ),
         );
       },
@@ -894,126 +917,39 @@ class _HeaderClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-// ===== LIQUID PAINTER — clean blue water =====
-class _LiquidPainter extends CustomPainter {
+// ===== SHADER WATER PAINTER =====
+class _ShaderWaterPainter extends CustomPainter {
+  final ui.FragmentProgram program;
   final double surfaceAngle;
   final double waveEnergy;
   final double wavePhase;
+  final double tiltY;
 
-  _LiquidPainter({
+  _ShaderWaterPainter({
+    required this.program,
     required this.surfaceAngle,
     required this.waveEnergy,
     required this.wavePhase,
+    required this.tiltY,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final baseY = size.height * 0.62;
-    final slope = math.tan(surfaceAngle.clamp(-1.1, 1.1));
-    final centerX = size.width / 2;
-    final amp = waveEnergy.clamp(0.0, 1.5);
+    final shader = program.fragmentShader();
+    shader.setFloat(0, size.width);
+    shader.setFloat(1, size.height);
+    shader.setFloat(2, DateTime.now().millisecondsSinceEpoch / 1000.0);
+    shader.setFloat(3, surfaceAngle);
+    shader.setFloat(4, waveEnergy);
+    shader.setFloat(5, wavePhase);
+    shader.setFloat(6, tiltY);
 
-    double surfaceY(double x) {
-      final dx = x - centerX;
-      final line = baseY + dx * slope;
-      final w1 = math.sin(x * 0.006 + wavePhase * 1.05) * 9.0 * amp;
-      final w2 = math.sin(x * 0.017 - wavePhase * 1.4) * 4.5 * amp;
-      final w3 = math.sin(x * 0.039 + wavePhase * 0.85) * 2.0 * amp;
-      final w4 = math.sin(x * 0.082 - wavePhase * 2.0) * 0.9 * amp;
-      final edgeDist = math.min(x, size.width - x);
-      final meniscus = edgeDist < 40
-          ? -math.pow((40 - edgeDist) / 40, 2).toDouble() * 10
-          : 0.0;
-      return line + w1 + w2 + w3 + w4 + meniscus;
-    }
-
-    // WATER BODY — solid blue, no muddiness
-    final waterPath = Path();
-    waterPath.moveTo(0, surfaceY(0));
-    for (double x = 0; x <= size.width; x += 3) {
-      waterPath.lineTo(x, surfaceY(x));
-    }
-    waterPath.lineTo(size.width, size.height);
-    waterPath.lineTo(0, size.height);
-    waterPath.close();
-
-    final shader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: const [
-        Color(0xFF7DD3FC),
-        Color(0xFF0EA5E9),
-        Color(0xFF075985),
-      ],
-      stops: const [0.0, 0.35, 1.0],
-    ).createShader(Rect.fromLTWH(0, baseY - 20, size.width, size.height));
-
-    canvas.drawPath(waterPath, Paint()..shader = shader);
-
-    // SURFACE LINE — layered glow
-    final sPath = Path();
-    for (double x = 0; x <= size.width; x += 3) {
-      final y = surfaceY(x);
-      if (x == 0) {
-        sPath.moveTo(x, y);
-      } else {
-        sPath.lineTo(x, y);
-      }
-    }
-
-    // Outer cyan glow
-    canvas.drawPath(
-      sPath,
-      Paint()
-        ..color = const Color(0xFFBAE6FD).withOpacity(0.55)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 16
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
-    );
-
-    // White glow
-    canvas.drawPath(
-      sPath,
-      Paint()
-        ..color = Colors.white.withOpacity(0.7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-    );
-
-    // Crisp top edge
-    canvas.drawPath(
-      sPath,
-      Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
-    );
-
-    // SPECULAR HIGHLIGHTS on surface
-    for (int i = 0; i < 3; i++) {
-      final sx = size.width * (0.22 + i * 0.28) +
-          math.sin(wavePhase * 1.3 + i * 2) * 40;
-      final sy = surfaceY(sx) - 2;
-      canvas.drawCircle(
-        Offset(sx, sy),
-        7.0,
-        Paint()
-          ..shader = RadialGradient(
-            colors: [
-              Colors.white.withOpacity(0.9),
-              Colors.white.withOpacity(0.0),
-            ],
-          ).createShader(Rect.fromCircle(center: Offset(sx, sy), radius: 7)),
-      );
-    }
+    final paint = Paint()..shader = shader;
+    canvas.drawRect(Offset.zero & size, paint);
   }
 
   @override
-  bool shouldRepaint(covariant _LiquidPainter old) =>
-      old.surfaceAngle != surfaceAngle ||
-      old.waveEnergy != waveEnergy ||
-      old.wavePhase != wavePhase;
+  bool shouldRepaint(covariant _ShaderWaterPainter old) => true;
 }
 
 // ===== SIGNUP (unchanged) =====

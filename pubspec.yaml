@@ -36,6 +36,8 @@ flutter:
   assets:
     - assets/logo/jajnet-logo.png
     - assets/fonts/SolaimanLipi.ttf
+  shaders:
+    - shaders/water.frag
 
 flutter_launcher_icons:
   android: true
