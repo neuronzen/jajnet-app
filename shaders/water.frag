@@ -33,15 +33,16 @@ void main() {
     float nx = fc.x / uSize.x;
     float e = clamp(uWaveEnergy, 0.0, 1.5);
 
-    // Wave equation (multi-frequency)
+    // Ambient water ripple (very subtle — real calm water is flat)
     float wave = 0.0;
-    wave += sin(nx * 6.283 + uTime * 0.55) * 8.0;
-    wave += sin(nx * 12.566 - uTime * 0.42) * 4.0;
-    wave += sin(nx * 21.0 + uTime * 0.80) * 1.8;
-    // Excited waves from shake/tilt
-    wave += sin(nx * 8.0 + uWavePhase * 1.15) * 18.0 * e;
-    wave += sin(nx * 17.0 - uWavePhase * 1.40) * 8.0 * e;
-    wave += sin(nx * 32.0 + uWavePhase * 0.90) * 3.5 * e;
+    wave += sin(nx * 6.283 + uTime * 0.55) * 2.0;
+    wave += sin(nx * 12.566 - uTime * 0.42) * 1.2;
+    wave += sin(nx * 21.0 + uTime * 0.80) * 0.5;
+    // Excited sloshing waves (from shake/tilt) — dominant when present
+    wave += sin(nx * 5.0 + uWavePhase * 1.00) * 28.0 * e;
+    wave += sin(nx * 8.0 + uWavePhase * 1.15) * 16.0 * e;
+    wave += sin(nx * 17.0 - uWavePhase * 1.40) * 7.0 * e;
+    wave += sin(nx * 32.0 + uWavePhase * 0.90) * 3.0 * e;
 
     float sy = baseY + dx * slope + wave + uTiltY * 15.0;
 

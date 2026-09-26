@@ -106,35 +106,35 @@ class _LoginScreenNewState extends State<LoginScreenNew>
     }
     double dt = (elapsed - _lastTick).inMicroseconds / 1e6;
     _lastTick = elapsed;
-    if (dt <= 0 || dt > 0.15) {
+    if (dt <= 0 || dt > 0.1) {
       _repaint.value++;
       return;
     }
+    dt = dt.clamp(0.001, 0.05);
 
-    // Target surface angle from gravity vector.
-    // Real water surface is perpendicular to gravity.
+    // === WATER SURFACE PHYSICS ===
+    // Target angle: water stays perpendicular to gravity.
     final safeGy = _gy.abs() < 0.5 ? (_gy >= 0 ? 0.5 : -0.5) : _gy;
-    final targetAngle = math.atan2(_gx, safeGy);
+    final targetAngle = math.atan2(-_gx, safeGy);
 
-    // Spring-damper — inertia, overshoot, oscillation
-    const kSpring = 50.0;
-    const cDamp = 2.6;
-    final aAccel =
-        (targetAngle - _surfaceAngle) * kSpring - _surfaceVel * cDamp;
+    // Under-damped spring → real sloshing with overshoot
+    // ζ = c/(2*sqrt(k)) ≈ 0.18 → 2-3 oscillations before settling
+    const kSpring = 38.0;
+    const cDamp = 2.2;
+    final aAccel = (targetAngle - _surfaceAngle) * kSpring
+                 - _surfaceVel * cDamp;
     _surfaceVel += aAccel * dt;
     _surfaceAngle += _surfaceVel * dt;
 
-    // Wave energy decays (ripples die out like real water)
-    _waveEnergy *= math.pow(0.92, dt * 60).toDouble();
-    if (_waveEnergy < 0.004) _waveEnergy = 0;
+    // Wave energy decays like real ripples
+    _waveEnergy *= math.pow(0.94, dt * 60).toDouble();
+    if (_waveEnergy < 0.005) _waveEnergy = 0;
 
     // === LOGO BUOY DRIFT ===
-    // In a tilted jar, a floating object drifts toward the LOWER side.
-    // Real liquid has inertia — overshoots, then settles.
-    final slope = math.tan(_surfaceAngle.clamp(-1.1, 1.1));
-    final targetX = slope * 90.0; // drift toward lower side
-    const kLogoSpring = 18.0;
-    const cLogoDamp = 2.4;
+    final slope = math.tan(_surfaceAngle.clamp(-1.2, 1.2));
+    final targetX = slope * 100.0;
+    const kLogoSpring = 16.0;
+    const cLogoDamp = 2.2;
     final aX = (targetX - _logoX) * kLogoSpring - _logoXVel * cLogoDamp;
     _logoXVel += aX * dt;
     _logoX += _logoXVel * dt;
@@ -145,27 +145,26 @@ class _LoginScreenNewState extends State<LoginScreenNew>
 
   void _startSensors() {
     try {
-      _accelSub = accelerometerEventStream().listen(
+      _accelSub = accelerometerEventStream(
+        samplingPeriod: SensorInterval.gameInterval,
+      ).listen(
         (event) {
-          // Heavy low-pass — keep slow tilt, discard shake noise
-          _gx = _gx * 0.75 + event.x * 0.25;
-          _gy = _gy * 0.75 + event.y * 0.25;
+          // Responsive filter — smooth but follows tilt quickly
+          _gx = _gx * 0.55 + event.x * 0.45;
+          _gy = _gy * 0.55 + event.y * 0.45;
 
-          // Shake detection from raw magnitude deviation
+          // Shake detection — total magnitude deviation from gravity
           final mag = math.sqrt(event.x * event.x +
               event.y * event.y + event.z * event.z);
           final deviation = (mag - 9.8).abs();
-          if (deviation > 0.3) {
-            _waveEnergy =
-                math.min(_waveEnergy + deviation * 0.030, 3.0);
-          }
-          // Tilt velocity also creates waves (sloshing)
-          final tiltVel = (_gx - _lastGx).abs() + (_gy - _lastGy).abs();
-          _lastGx = _gx;
-          _lastGy = _gy;
-          if (tiltVel > 0.4) {
-            _waveEnergy =
-                math.min(_waveEnergy + tiltVel * 0.015, 3.0);
+
+          if (deviation > 0.6) {
+            // Inject angular velocity — THIS is what makes real water slosh.
+            // The surface itself starts rotating, not just ripples.
+            final dir = event.x >= 0 ? 1.0 : -1.0;
+            final impulse = math.min(deviation * 1.4, 7.0);
+            _surfaceVel += dir * impulse;
+            _waveEnergy = math.min(_waveEnergy + deviation * 0.4, 2.8);
           }
         },
         onError: (_) {},
