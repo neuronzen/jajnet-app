@@ -7,9 +7,6 @@ import 'screens.dart';
 import 'services.dart';
 import 'theme.dart';
 
-// ============================================================
-// LOGIN SCREEN — Premium ISP Atmosphere
-// ============================================================
 class LoginScreenNew extends StatefulWidget {
   const LoginScreenNew({super.key});
   @override
@@ -23,28 +20,29 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   bool _loading = false;
   bool _hide = true;
   bool _showCreds = false;
+  bool _emailFocus = false;
+  bool _passFocus = false;
 
-  // Single subtle animation — atmosphere "breathing"
-  late final AnimationController _atmosphere;
   late final AnimationController _entrance;
+  late final AnimationController _aurora;
 
   @override
   void initState() {
     super.initState();
-    _atmosphere = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 5),
-    )..repeat(reverse: true);
     _entrance = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..forward();
+    _aurora = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
-    _atmosphere.dispose();
     _entrance.dispose();
+    _aurora.dispose();
     _email.dispose();
     _pass.dispose();
     super.dispose();
@@ -113,7 +111,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   }
 
   Widget _fade(Widget child, double delay) {
-    final start = delay / 1.4;
+    final start = delay / 1.5;
     return AnimatedBuilder(
       animation: _entrance,
       builder: (_, __) {
@@ -122,7 +120,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
         return Opacity(
           opacity: eased,
           child: Transform.translate(
-            offset: Offset(0, (1 - eased) * 16),
+            offset: Offset(0, (1 - eased) * 14),
             child: child,
           ),
         );
@@ -139,95 +137,69 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       backgroundColor: const Color(0xFFFBFBFC),
       body: Stack(
         children: [
-          // ============ HERO ============
+          // ===== HEADER =====
           Positioned(
             top: 0, left: 0, right: 0,
             height: headerH + 40,
             child: ClipPath(
               clipper: _HeaderClipper(),
-              child: Stack(
-                children: [
-                  // 1. Base gradient (deep → mid orange, no yellow)
-                  Positioned.fill(
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Color(0xFFB84200),
-                            Color(0xFFD95200),
-                            Color(0xFFE96615),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          stops: [0.0, 0.55, 1.0],
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFFC94400),
+                      Color(0xFFE55A00),
+                      Color(0xFFFF6B00),
+                      Color(0xFFFF8A3D),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    // Aurora blobs
+                    Positioned.fill(child: _auroraLayer()),
+                    // Diagonal gold lines
+                    Positioned.fill(child: _diagonalGoldLines()),
+                    // Top right corner accent
+                    Positioned(
+                      top: -80, right: -60,
+                      child: Container(
+                        width: 220, height: 220,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.13),
+                            width: 1.4,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  // 2. Radial highlight (top-right, subtle)
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                          colors: [
-                            const Color(0xFFFFB880).withOpacity(0.16),
-                            Colors.transparent,
-                          ],
-                          center: const Alignment(0.90, -0.90),
-                          radius: 1.1,
+                    // Center content
+                    Positioned.fill(
+                      child: SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: EdgeInsets.only(bottom: headerH * 0.14),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _fade(_logoCard(), 0.0),
+                              const SizedBox(height: 20),
+                              _fade(_brandBlock(), 0.15),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  // 3. Soft bottom vignette for depth
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.transparent,
-                            const Color(0xFF6B2400).withOpacity(0.12),
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // 4. Signal atmosphere (subtle network theme)
-                  Positioned.fill(
-                    child: AnimatedBuilder(
-                      animation: _atmosphere,
-                      builder: (_, __) => CustomPaint(
-                        painter: _AtmospherePainter(
-                          breath: _atmosphere.value,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // 5. Content
-                  Positioned.fill(
-                    child: SafeArea(
-                      bottom: false,
-                      child: Padding(
-                        padding: EdgeInsets.only(bottom: headerH * 0.16),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _fade(_logoBlock(), 0.05),
-                            const SizedBox(height: 24),
-                            _fade(_brandBlock(), 0.20),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
 
-          // ============ BODY (unchanged) ============
+          // ===== BODY =====
           Positioned(
             top: headerH,
             left: 0, right: 0, bottom: 0,
@@ -278,21 +250,25 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                     ),
                     const SizedBox(height: 26),
                     _fade(
-                      _liftField(
+                      _field(
                         controller: _email,
                         label: 'ইমেইল',
                         icon: Icons.alternate_email_rounded,
                         keyboard: TextInputType.emailAddress,
+                        focused: _emailFocus,
+                        onFocusChange: (v) => setState(() => _emailFocus = v),
                       ),
                       0.40,
                     ),
                     const SizedBox(height: 14),
                     _fade(
-                      _liftField(
+                      _field(
                         controller: _pass,
                         label: 'পাসওয়ার্ড',
                         icon: Icons.lock_outline_rounded,
                         obscure: _hide,
+                        focused: _passFocus,
+                        onFocusChange: (v) => setState(() => _passFocus = v),
                         suffix: IconButton(
                           icon: Icon(
                             _hide
@@ -311,6 +287,19 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                     const SizedBox(height: 20),
                     _fade(_credentialsCard(), 0.66),
                     const SizedBox(height: 24),
+                    _fade(
+                      Center(
+                        child: Text(
+                          'সংস্করণ ১.০.০',
+                          style: GoogleFonts.hindSiliguri(
+                            fontSize: 10.5,
+                            color: const Color(0xFFB0B7C3),
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                      0.76,
+                    ),
                   ],
                 ),
               ),
@@ -321,38 +310,116 @@ class _LoginScreenNewState extends State<LoginScreenNew>
     );
   }
 
-  // ============ LOGO — clean, integrated ============
-  Widget _logoBlock() {
+  // ===== AURORA LAYER =====
+  Widget _auroraLayer() {
+    return AnimatedBuilder(
+      animation: _aurora,
+      builder: (_, __) {
+        final t = _aurora.value;
+        final r = t * math.pi * 2;
+        return Stack(
+          children: [
+            Positioned(
+              left: -70 + 50 * math.sin(r),
+              top: -40 + 40 * math.cos(r),
+              child: _blob(260, const Color(0xFFFFB547).withOpacity(0.22)),
+            ),
+            Positioned(
+              right: -80 + 60 * math.cos(r + 1.6),
+              bottom: -60 + 30 * math.sin(r + 1.6),
+              child: _blob(240, Colors.white.withOpacity(0.10)),
+            ),
+            Positioned(
+              right: 30 + 40 * math.sin(r + 3.2),
+              top: 10 + 30 * math.cos(r + 3.2),
+              child: _blob(200, const Color(0xFFFFD54F).withOpacity(0.14)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _blob(double size, Color color) {
     return Container(
-      width: 110,
-      height: 110,
+      width: size, height: size,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6B2400).withOpacity(0.25),
-            blurRadius: 30,
-            spreadRadius: -4,
-            offset: const Offset(0, 14),
-          ),
-          BoxShadow(
-            color: const Color(0xFF6B2400).withOpacity(0.10),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color, color.withOpacity(0.0)],
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(26),
-        child: Image.asset(
-          'assets/logo/jajnet-logo.png',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
+    );
+  }
+
+  // ===== GOLD DIAGONAL LINES =====
+  Widget _diagonalGoldLines() {
+    return AnimatedBuilder(
+      animation: _aurora,
+      builder: (_, __) {
+        final t = _aurora.value;
+        return Stack(
+          children: List.generate(3, (i) {
+            final xOffset = (t - 0.5) * 20 + (i * 14);
+            return Positioned(
+              bottom: 100 - i * 18,
+              left: -80 + xOffset,
+              child: Transform.rotate(
+                angle: -0.35,
+                child: Container(
+                  width: 240,
+                  height: 1.1,
+                  color: const Color(0xFFFFB547).withOpacity(0.20),
+                ),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
+  // ===== LOGO =====
+  Widget _logoCard() {
+    return Container(
+      width: 108,
+      height: 108,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(0.15),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.22),
+          width: 1.2,
+        ),
+      ),
+      child: Center(
+        child: Container(
+          width: 84,
+          height: 84,
+          decoration: BoxDecoration(
             color: Colors.white,
-            child: const Icon(
-              Icons.wifi_rounded,
-              size: 44,
-              color: JC.primary,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0F172A).withOpacity(0.28),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Image.asset(
+                'assets/logo/jajnet-logo.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.wifi_rounded,
+                  size: 40,
+                  color: JC.primary,
+                ),
+              ),
             ),
           ),
         ),
@@ -360,7 +427,6 @@ class _LoginScreenNewState extends State<LoginScreenNew>
     );
   }
 
-  // ============ BRAND BLOCK — refined hierarchy ============
   Widget _brandBlock() {
     return Column(
       children: [
@@ -368,151 +434,143 @@ class _LoginScreenNewState extends State<LoginScreenNew>
           'JAJ Net',
           textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
-            fontSize: 28,
+            fontSize: 27,
             fontWeight: FontWeight.w800,
             color: Colors.white,
-            letterSpacing: 2.0,
+            letterSpacing: 1.6,
             height: 1.2,
           ),
         ),
-        const SizedBox(height: 10),
-        // Thin refined divider
+        const SizedBox(height: 8),
         Container(
-          width: 30,
-          height: 2,
+          width: 44,
+          height: 3,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.65),
+            color: const Color(0xFFFFB547),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Text(
           'তৈরি হোক নিরবিচ্ছিন্ন সম্পর্ক',
           textAlign: TextAlign.center,
           style: GoogleFonts.hindSiliguri(
             fontSize: 12.5,
-            color: Colors.white.withOpacity(0.88),
+            color: Colors.white.withOpacity(0.95),
             height: 1.5,
-            fontWeight: FontWeight.w500,
           ),
         ),
       ],
     );
   }
 
-  // ============ FIELDS (unchanged) ============
-  Widget _liftField({
+  // ===== FIELD =====
+  Widget _field({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     TextInputType? keyboard,
     bool obscure = false,
+    bool focused = false,
+    ValueChanged<bool>? onFocusChange,
     Widget? suffix,
   }) {
-    return StatefulBuilder(
-      builder: (context, setLocal) {
-        bool focused = false;
-        return Focus(
-          onFocusChange: (v) => setLocal(() => focused = v),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: focused
-                  ? [
-                      BoxShadow(
-                        color: JC.primary.withOpacity(0.16),
-                        blurRadius: 18,
-                        offset: const Offset(0, 6),
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: const Color(0xFF0F172A).withOpacity(0.035),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+    return Focus(
+      onFocusChange: onFocusChange,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: focused
+              ? [
+                  BoxShadow(
+                    color: JC.primary.withOpacity(0.16),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: const Color(0xFF0F172A).withOpacity(0.035),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: TextField(
+          controller: controller,
+          keyboardType: keyboard,
+          obscureText: obscure,
+          style: GoogleFonts.hindSiliguri(
+            fontSize: 15,
+            color: const Color(0xFF0F172A),
+          ),
+          decoration: InputDecoration(
+            labelText: label,
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 14, right: 6),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  color: focused
+                      ? JC.primary.withOpacity(0.14)
+                      : const Color(0xFFF2F4F7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  icon,
+                  color: focused ? JC.primary : const Color(0xFF64748B),
+                  size: 18,
+                ),
+              ),
             ),
-            child: TextField(
-              controller: controller,
-              keyboardType: keyboard,
-              obscureText: obscure,
-              style: GoogleFonts.hindSiliguri(
-                fontSize: 15,
-                color: const Color(0xFF0F172A),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 0, minHeight: 0,
+            ),
+            suffixIcon: suffix,
+            labelStyle: GoogleFonts.hindSiliguri(
+              fontSize: 14,
+              color: const Color(0xFF64748B),
+            ),
+            floatingLabelStyle: GoogleFonts.hindSiliguri(
+              color: JC.primary,
+              fontWeight: FontWeight.w500,
+              backgroundColor: const Color(0xFFFBFBFC),
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: Color(0xFFE2E5EB),
+                width: 1.4,
               ),
-              decoration: InputDecoration(
-                labelText: label,
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.only(left: 14, right: 6),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    decoration: BoxDecoration(
-                      color: focused
-                          ? JC.primary.withOpacity(0.14)
-                          : const Color(0xFFF2F4F7),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    child: Icon(
-                      icon,
-                      color: focused
-                          ? JC.primary
-                          : const Color(0xFF64748B),
-                      size: 18,
-                    ),
-                  ),
-                ),
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: 0,
-                  minHeight: 0,
-                ),
-                suffixIcon: suffix,
-                labelStyle: GoogleFonts.hindSiliguri(
-                  fontSize: 14,
-                  color: const Color(0xFF64748B),
-                ),
-                floatingLabelStyle: GoogleFonts.hindSiliguri(
-                  color: JC.primary,
-                  fontWeight: FontWeight.w500,
-                  backgroundColor: const Color(0xFFFBFBFC),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: Color(0xFFE2E5EB),
-                    width: 1.4,
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: Color(0xFFE2E5EB),
-                    width: 1.4,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: JC.primary,
-                    width: 1.8,
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 18,
-                  horizontal: 16,
-                ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: Color(0xFFE2E5EB),
+                width: 1.4,
               ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: JC.primary,
+                width: 1.8,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 18, horizontal: 16,
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
+  // ===== LOGIN BUTTON =====
   Widget _loginButton() {
     return GestureDetector(
       onTap: _loading ? null : _login,
@@ -534,8 +592,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
               ? const SizedBox(
                   width: 22, height: 22,
                   child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2.5,
+                    color: Colors.white, strokeWidth: 2.5,
                   ),
                 )
               : Row(
@@ -563,6 +620,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
     );
   }
 
+  // ===== CREDENTIALS CARD =====
   Widget _credentialsCard() {
     return Container(
       decoration: BoxDecoration(
@@ -577,8 +635,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
             borderRadius: BorderRadius.circular(14),
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
+                horizontal: 16, vertical: 14,
               ),
               child: Row(
                 children: [
@@ -686,9 +743,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   }
 }
 
-// ============================================================
-// HEADER CLIPPER (wave curve — retained)
-// ============================================================
+// ===== WAVE CLIPPER =====
 class _HeaderClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
@@ -709,62 +764,7 @@ class _HeaderClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-// ============================================================
-// ATMOSPHERE PAINTER — subtle connectivity theme
-// ============================================================
-class _AtmospherePainter extends CustomPainter {
-  final double breath; // 0.0 → 1.0
-
-  _AtmospherePainter({required this.breath});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Signal source — behind logo
-    final center = Offset(size.width * 0.5, size.height * 0.42);
-
-    // ---- Two extremely faint concentric rings ----
-    // Inner ring
-    final innerPaint = Paint()
-      ..color = Colors.white.withOpacity(0.055 + breath * 0.020)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    canvas.drawCircle(center, 105, innerPaint);
-
-    // Outer ring — even fainter
-    final outerPaint = Paint()
-      ..color = Colors.white.withOpacity(0.032 + breath * 0.015)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.9;
-    canvas.drawCircle(center, 165, outerPaint);
-
-    // ---- One soft diagonal light streak (top-left direction) ----
-    final trail = Paint()
-      ..shader = LinearGradient(
-        colors: [
-          Colors.transparent,
-          Colors.white.withOpacity(0.055 + breath * 0.015),
-          Colors.transparent,
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..strokeWidth = 0.8;
-    canvas.drawLine(
-      Offset(size.width * 0.12, 0),
-      Offset(size.width * 0.30, size.height * 0.85),
-      trail,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _AtmospherePainter oldDelegate) {
-    return oldDelegate.breath != breath;
-  }
-}
-
-// ============================================================
-// SIGNUP SCREEN (unchanged)
-// ============================================================
+// ===== SIGNUP (unchanged) =====
 class SignupScreenNew extends StatefulWidget {
   const SignupScreenNew({super.key});
   @override
@@ -785,7 +785,6 @@ class _SignupScreenNewState extends State<SignupScreenNew> {
     if (_name.text.isEmpty || _email.text.isEmpty || _pass.text.isEmpty) return;
     setState(() => _loading = true);
     try {
-      final pkg = AppInfo.packages.firstWhere((p) => p['speed'] == _pkg);
       await AuthService.signUp(
         name: _name.text.trim(),
         phone: _phone.text.trim(),
@@ -798,7 +797,6 @@ class _SignupScreenNewState extends State<SignupScreenNew> {
         context,
         MaterialPageRoute(builder: (_) => const MainShell()),
       );
-      final _ = pkg;
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -855,7 +853,7 @@ class _SignupScreenNewState extends State<SignupScreenNew> {
                     ? const SizedBox(
                         width: 22, height: 22,
                         child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2),
+                            color: Colors.white, strokeWidth: 2),
                       )
                     : const Text('রেজিস্ট্রেশন'),
               ),

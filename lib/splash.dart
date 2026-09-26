@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,35 +17,40 @@ class SplashScreenNew extends StatefulWidget {
 
 class _SplashScreenNewState extends State<SplashScreenNew>
     with TickerProviderStateMixin {
-  late final AnimationController _intro;
-  late final AnimationController _halo;
-  late final AnimationController _wave;
-  late final AnimationController _bgShift;
+  late final AnimationController _master;    // 2.8s master timeline
+  late final AnimationController _dotPulse;  // center dot pulse
+  late final AnimationController _wave;      // signal arcs repeat
+  late final AnimationController _dots;      // loading dots
+  late final AnimationController _rotate;    // bg rings rotate
 
   @override
   void initState() {
     super.initState();
-    _intro = AnimationController(
+    _master = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 2800),
     )..forward();
-    _halo = AnimationController(
+    _dotPulse = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 4000),
-    )..repeat();
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
     _wave = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3200),
+      duration: const Duration(milliseconds: 2200),
     )..repeat();
-    _bgShift = AnimationController(
+    _dots = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 5000),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+    _rotate = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 30),
+    )..repeat();
     _go();
   }
 
   Future<void> _go() async {
-    await Future.delayed(const Duration(milliseconds: 3800));
+    await Future.delayed(const Duration(milliseconds: 3000));
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
     final seen = prefs.getBool('onboarding_seen') ?? false;
@@ -62,297 +67,484 @@ class _SplashScreenNewState extends State<SplashScreenNew>
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 700),
+        transitionDuration: const Duration(milliseconds: 600),
         pageBuilder: (_, __, ___) => next,
         transitionsBuilder: (_, a, __, c) =>
-  FadeTransition(opacity: a, child: c),
+            FadeTransition(opacity: a, child: c),
       ),
     );
   }
 
   @override
   void dispose() {
-    _intro.dispose();
-    _halo.dispose();
+    _master.dispose();
+    _dotPulse.dispose();
     _wave.dispose();
-    _bgShift.dispose();
+    _dots.dispose();
+    _rotate.dispose();
     super.dispose();
+  }
+
+  // Map master value to a staged 0..1 progress
+  double _stage(double from, double to, {Curve curve = Curves.easeOut}) {
+    final v = _master.value;
+    if (v <= from) return 0;
+    if (v >= to) return 1;
+    return curve.transform((v - from) / (to - from));
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return Scaffold(
-      body: AnimatedBuilder(
-        animation: _bgShift,
-        builder: (_, __) {
-final shift = _bgShift.value;
-return Container(
-  decoration: BoxDecoration(
-    gradient: LinearGradient(
-      colors: const [
-        Color(0xFFFFB37A),
-        Color(0xFFFF7A1A),
-        Color(0xFFE55A00),
-        Color(0xFFC94400),
-      ],
-      begin: Alignment(-1 + shift * 0.4, -1),
-      end: Alignment(1, 1 - shift * 0.3),
-    ),
-  ),
-  child: Stack(
-    children: [
-      ..._signalWaves(),
-      ..._particles(size),
-      SafeArea(
-        child: SizedBox(
-          width: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(flex: 2),
-              _logoWithHalo(),
-              const SizedBox(height: 44),
-              _animatedText(
-                'JAJ Net',
-                delay: 500,
-                style: GoogleFonts.poppins(
-                  fontSize: 48,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: 2,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withOpacity(0.18),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              _animatedText(
-                'তৈরি হোক নিরবিচ্ছিন্ন সম্পর্ক',
-                delay: 900,
-                style: GoogleFonts.hindSiliguri(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white.withOpacity(0.94),
-                  letterSpacing: 0.6,
-                ),
-              ),
-              const Spacer(flex: 3),
-              _pulseDots(),
-              const SizedBox(height: 60),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFB53D00),
+              Color(0xFFE55A00),
+              Color(0xFFFF6B00),
+              Color(0xFFFF9F5A),
             ],
+            begin: Alignment.bottomLeft,
+            end: Alignment.topRight,
           ),
         ),
-      ),
-    ],
-  ),
-);
-        },
-      ),
-    );
-  }
-
-  List<Widget> _signalWaves() {
-    return List.generate(5, (i) {
-      return AnimatedBuilder(
-        animation: _wave,
-        builder: (_, __) {
-final p = (_wave.value + i / 5.0) % 1.0;
-final size = 80 + p * 480;
-final opacity = (1.0 - p) * 0.5;
-return Center(
-  child: Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      border: Border.all(
-        color: Colors.white.withOpacity(
-            opacity.clamp(0.0, 0.55)),
-        width: 1.6,
-      ),
-    ),
-  ),
-);
-        },
-      );
-    });
-  }
-
-  List<Widget> _particles(Size size) {
-    final r = Random(13);
-    return List.generate(40, (i) {
-      final baseLeft = r.nextDouble() * size.width;
-      final baseTop = r.nextDouble() * size.height;
-      final dotSize = 1.5 + r.nextDouble() * 3.0;
-      final delay = r.nextDouble();
-      final swayAmp = 12 + r.nextDouble() * 30;
-      final speed = 0.35 + r.nextDouble() * 0.55;
-      final baseOpacity = 0.25 + r.nextDouble() * 0.5;
-      return AnimatedBuilder(
-        animation: _wave,
-        builder: (_, __) {
-final t = ((_wave.value * speed) + delay) % 1.0;
-final xOff = sin(t * pi * 2) * swayAmp;
-final yOff = -t * 140;
-return Positioned(
-  left: baseLeft + xOff,
-  top: baseTop + yOff,
-  child: Opacity(
-    opacity: ((1 - t) * baseOpacity).clamp(0.0, 1.0),
-    child: Container(
-      width: dotSize,
-      height: dotSize,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-    ),
-  ),
-);
-        },
-      );
-    });
-  }
-
-  Widget _logoWithHalo() {
-    return AnimatedBuilder(
-      animation: _intro,
-      builder: (_, __) {
-        final t = Curves.easeOutBack
-  .transform(_intro.value.clamp(0.0, 1.0));
-        return SizedBox(
-width: 220,
-height: 220,
-child: Stack(
-  alignment: Alignment.center,
-  children: [
-    AnimatedBuilder(
-      animation: _halo,
-      builder: (_, __) {
-        return Transform.rotate(
-          angle: _halo.value * pi * 2,
-          child: Container(
-            width: 210,
-            height: 210,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: SweepGradient(
-                colors: [
-                  Colors.white.withOpacity(0.0),
-                  Colors.white.withOpacity(0.7),
-                  Colors.white.withOpacity(0.0),
+        child: Stack(
+          children: [
+            // Subtle grid pattern
+            Positioned.fill(
+              child: CustomPaint(painter: _GridPainter()),
+            ),
+            // Rotating transparent rings (background)
+            Positioned.fill(child: _backgroundRings()),
+            // Main content
+            SafeArea(
+              child: Column(
+                children: [
+                  const Spacer(flex: 5),
+                  SizedBox(
+                    width: 240,
+                    height: 240,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        ..._signalArcs(),
+                        ..._particles(size),
+                        _centerDot(),
+                        _logo(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  _brandName(),
+                  const SizedBox(height: 14),
+                  _tagline(),
+                  const Spacer(flex: 4),
+                  _loadingDots(),
+                  const SizedBox(height: 44),
                 ],
-                stops: const [0.0, 0.5, 1.0],
               ),
-            ),
-          ),
-        );
-      },
-    ),
-    Container(
-      width: 180,
-      height: 180,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withOpacity(0.08),
-      ),
-    ),
-    Transform.scale(
-      scale: 0.3 + t * 0.7,
-      child: Container(
-        width: 132,
-        height: 132,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(40),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withOpacity(0.5),
-              blurRadius: 40,
-              spreadRadius: 2,
-            ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.18),
-              blurRadius: 30,
-              offset: const Offset(0, 14),
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(40),
-          child: Image.asset(
-            'assets/logo/jajnet-logo.png',
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const Icon(
-              Icons.wifi_rounded,
-              size: 70,
-              color: JC.primary,
+      ),
+    );
+  }
+
+  // ============ STAGE 1: Center dot ============
+  Widget _centerDot() {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_master, _dotPulse]),
+      builder: (_, __) {
+        final appear = _stage(0.0, 0.18, curve: Curves.easeIn);
+        // Hide when logo starts appearing (Stage 3)
+        final fade = 1.0 - _stage(0.5, 0.62);
+        final opacity = appear * fade;
+        if (opacity <= 0.01) return const SizedBox.shrink();
+        final scale = 1.0 + _dotPulse.value * 0.3;
+        return Opacity(
+          opacity: opacity.clamp(0.0, 1.0),
+          child: Transform.scale(
+            scale: scale,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.6),
+                    blurRadius: 22,
+                    spreadRadius: 4,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
-    ),
-  ],
-),
         );
       },
     );
   }
 
-  Widget _animatedText(String text, {
-    required int delay,
-    required TextStyle style,
-  }) {
+  // ============ STAGE 2: Signal arcs ============
+  List<Widget> _signalArcs() {
+    return List.generate(4, (i) {
+      return AnimatedBuilder(
+        animation: Listenable.merge([_master, _wave]),
+        builder: (_, __) {
+          // Stage: appear between 0.15 and 0.55 in master timeline
+          final appear = _stage(0.15 + i * 0.06, 0.35 + i * 0.06);
+          // Fade out as logo comes in
+          final fade = 1.0 - _stage(0.5, 0.65);
+          final baseOpacity = appear * fade * 0.7;
+          if (baseOpacity <= 0.01) return const SizedBox.shrink();
+
+          // Animated wave radius — outward pulse
+          final waveP = ((_wave.value + i / 4) % 1.0);
+          final size = 60.0 + i * 32 + waveP * 24;
+          final opacity = baseOpacity * (1 - waveP) * 1.4;
+
+          return SizedBox(
+            width: size,
+            height: size,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(
+                          opacity.clamp(0.0, 0.75)),
+                      width: 1.8,
+                    ),
+                  ),
+                ),
+                // Small bright particle on the right edge
+                Align(
+                  alignment: const Alignment(1.0, -0.4),
+                  child: Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(
+                          opacity.clamp(0.0, 1.0)),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.8),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    });
+  }
+
+  // ============ STAGE 2b: Particles ============
+  List<Widget> _particles(Size size) {
+    final r = math.Random(13);
+    final data = List.generate(24, (i) {
+      return {
+        'x': r.nextDouble() * 2 - 1,
+        'y': r.nextDouble() * 2 - 1,
+        'delay': r.nextDouble() * 0.4,
+        'speed': 0.6 + r.nextDouble() * 0.6,
+        'size': 2.0 + r.nextDouble() * 2.0,
+      };
+    });
+
+    return data.map((d) {
+      return AnimatedBuilder(
+        animation: Listenable.merge([_master, _wave]),
+        builder: (_, __) {
+          final appear = _stage(0.15 + d['delay'], 0.5);
+          final fade = 1.0 - _stage(0.55, 0.7);
+          final base = (appear * fade).clamp(0.0, 1.0);
+          if (base <= 0.01) return const SizedBox.shrink();
+
+          final w = _wave.value;
+          final t = (w * d['speed'] + d['delay']) % 1.0;
+          final x = d['x'] * 100;
+          final y = d['y'] * 100 - t * 80;
+          final opacity = base * (1 - t) * 0.9;
+
+          return Transform.translate(
+            offset: Offset(x, y),
+            child: Opacity(
+              opacity: opacity.clamp(0.0, 1.0),
+              child: Container(
+                width: d['size'],
+                height: d['size'],
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }).toList();
+  }
+
+  // ============ STAGE 3: Logo ============
+  Widget _logo() {
     return AnimatedBuilder(
-      animation: _intro,
+      animation: _master,
       builder: (_, __) {
-        final threshold = delay / 2000.0;
-        final t = ((_intro.value - threshold) / (1 - threshold))
-  .clamp(0.0, 1.0);
+        final t = _stage(0.5, 0.75, curve: Curves.easeOutBack);
+        if (t <= 0.01) return const SizedBox.shrink();
+
+        // burst glow
+        final burst = _stage(0.5, 0.85);
+
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Burst glow
+            Opacity(
+              opacity: (1 - burst) * 0.6 + 0.4,
+              child: Transform.scale(
+                scale: 1.0 + burst * 0.8,
+                child: Container(
+                  width: 180,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.5),
+                        Colors.white.withOpacity(0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Logo card
+            Transform.scale(
+              scale: 0.3 + t * 0.7,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withOpacity(0.35),
+                      blurRadius: 36,
+                      offset: const Offset(0, 16),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Image.asset(
+                      'assets/logo/jajnet-logo.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.wifi_rounded,
+                        size: 56,
+                        color: JC.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ============ STAGE 4: Brand name ============
+  Widget _brandName() {
+    return AnimatedBuilder(
+      animation: _master,
+      builder: (_, __) {
+        final t = _stage(0.65, 0.85);
+        if (t <= 0.01) return const SizedBox.shrink();
         return Opacity(
-opacity: t,
-child: Transform.translate(
-  offset: Offset(0, (1 - t) * 28),
-  child: Text(text,
-      textAlign: TextAlign.center, style: style),
-),
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, (1 - t) * 24),
+            child: Column(
+              children: [
+                Text(
+                  'JAJ Net',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 2,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Gold underline draw effect
+                AnimatedBuilder(
+                  animation: _master,
+                  builder: (_, __) {
+                    final w = _stage(0.75, 0.95);
+                    return Container(
+                      width: 50 * w,
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFB547),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _pulseDots() {
+  // ============ STAGE 5: Tagline ============
+  Widget _tagline() {
     return AnimatedBuilder(
-      animation: _wave,
+      animation: _master,
       builder: (_, __) {
-        return Row(
-mainAxisSize: MainAxisSize.min,
-children: List.generate(3, (i) {
-  final phase = (_wave.value + i * 0.2) % 1.0;
-  final scale = 0.6 + (sin(phase * pi * 2) + 1) * 0.35;
-  return Container(
-    margin: const EdgeInsets.symmetric(horizontal: 5),
-    child: Transform.scale(
-      scale: scale,
-      child: Container(
-        width: 9,
-        height: 9,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
-          shape: BoxShape.circle,
-        ),
-      ),
-    ),
-  );
-}),
+        final t = _stage(0.8, 0.98);
+        return Opacity(
+          opacity: t.clamp(0.0, 1.0),
+          child: Text(
+            'তৈরি হোক নিরবিচ্ছিন্ন সম্পর্ক',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.hindSiliguri(
+              fontSize: 14.5,
+              color: Colors.white.withOpacity(0.94),
+              letterSpacing: 0.4,
+              height: 1.5,
+            ),
+          ),
         );
       },
     );
   }
+
+  // ============ Loading dots ============
+  Widget _loadingDots() {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_master, _dots]),
+      builder: (_, __) {
+        final appear = _stage(0.85, 1.0);
+        return Opacity(
+          opacity: appear.clamp(0.0, 1.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(3, (i) {
+              final phase = (_dots.value + i * 0.15) % 1.0;
+              final scale = 0.65 + math.sin(phase * math.pi * 2) * 0.35 + 0.35;
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                child: Transform.scale(
+                  scale: scale.clamp(0.6, 1.4),
+                  child: Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.92),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+
+  // ============ Background rings ============
+  Widget _backgroundRings() {
+    return AnimatedBuilder(
+      animation: _rotate,
+      builder: (_, __) {
+        return CustomPaint(
+          painter: _RingsPainter(rotation: _rotate.value),
+        );
+      },
+    );
+  }
+}
+
+// ============ Custom Painters ============
+
+class _GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.05)
+      ..strokeWidth = 1;
+    const step = 40.0;
+    for (double x = 0; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _RingsPainter extends CustomPainter {
+  final double rotation;
+  _RingsPainter({required this.rotation});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.07)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    final center = Offset(size.width * 0.5, size.height * 0.42);
+    for (int i = 0; i < 3; i++) {
+      final r = 140.0 + i * 90;
+      canvas.drawCircle(center, r, paint);
+    }
+
+    // slow rotating small dashes
+    final dashPaint = Paint()
+      ..color = Colors.white.withOpacity(0.12)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final rotateCenter =
+        Offset(size.width * 0.85, size.height * 0.15);
+    final path = Path();
+    final startA = rotation * 2 * math.pi;
+    final endA = startA + math.pi / 4;
+    path.addArc(
+      Rect.fromCircle(center: rotateCenter, radius: 60),
+      startA,
+      endA - startA,
+    );
+    canvas.drawPath(path, dashPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingsPainter old) =>
+      old.rotation != rotation;
 }

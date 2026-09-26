@@ -195,32 +195,27 @@ child: Column(
   ],
 ),
         ),
-        Container(
-width: 46,
-height: 46,
-decoration: BoxDecoration(
-  gradient: JC.heroGradient,
-  borderRadius: BorderRadius.circular(14),
-  boxShadow: [
-    BoxShadow(
-      color: JC.primary.withOpacity(0.3),
-      blurRadius: 14,
-      offset: const Offset(0, 6),
-    ),
-  ],
-),
-child: Padding(
-  padding: const EdgeInsets.all(6),
-  child: Image.asset(
-    'assets/logo/jajnet-logo.png',
-    fit: BoxFit.contain,
-    errorBuilder: (_, __, ___) => const Icon(
-      Icons.wifi_rounded,
-      color: Colors.white,
-      size: 24,
-    ),
-  ),
-),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.asset(
+            'assets/logo/jajnet-logo.png',
+            width: 46,
+            height: 46,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: JC.heroGradient,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.wifi_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ),
         ),
       ],
     );

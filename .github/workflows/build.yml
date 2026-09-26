@@ -236,14 +236,20 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq imagemagick
           mkdir -p assets/icon
-          # Get max dimension and add 25% padding on white background
+          # Get max dimension and add 45% padding on white background
           W=$(identify -format "%w" assets/logo/jajnet-logo.png)
           H=$(identify -format "%h" assets/logo/jajnet-logo.png)
           MAX=$W
           if [ $H -gt $MAX ]; then MAX=$H; fi
-          CANVAS=$((MAX * 125 / 100))
+          # Crop to square first, then add padding
+          SIDE=$MAX
           convert assets/logo/jajnet-logo.png \
-            -resize ${MAX}x${MAX} \
+            -resize ${SIDE}x${SIDE}^ \
+            -gravity center \
+            -extent ${SIDE}x${SIDE} \
+            /tmp/square.png
+          CANVAS=$((SIDE * 145 / 100))
+          convert /tmp/square.png \
             -background white \
             -gravity center \
             -extent ${CANVAS}x${CANVAS} \
