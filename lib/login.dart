@@ -324,64 +324,38 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   // ============ LOGO — clean, integrated ============
   Widget _logoBlock() {
     return Container(
-      width: 92,
-      height: 92,
+      width: 110,
+      height: 110,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
-          // Warm ambient shadow below
           BoxShadow(
-            color: const Color(0xFF6B2400).withOpacity(0.28),
-            blurRadius: 32,
+            color: const Color(0xFF6B2400).withOpacity(0.25),
+            blurRadius: 30,
             spreadRadius: -4,
-            offset: const Offset(0, 16),
+            offset: const Offset(0, 14),
           ),
-          // Tight contact shadow
           BoxShadow(
-            color: const Color(0xFF6B2400).withOpacity(0.14),
+            color: const Color(0xFF6B2400).withOpacity(0.10),
             blurRadius: 6,
-            offset: const Offset(0, 3),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          // White rounded square with very subtle warm tint at bottom
-          Container(
-            width: 92,
-            height: 92,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFFFFFF), Color(0xFFFFFCF8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.6),
-                width: 1,
-              ),
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.wifi_rounded,
-                size: 40,
-                color: JC.primary,
-              ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(26),
+        child: Image.asset(
+          'assets/logo/jajnet-logo.png',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            color: Colors.white,
+            child: const Icon(
+              Icons.wifi_rounded,
+              size: 44,
+              color: JC.primary,
             ),
           ),
-          // Top-edge inner highlight (glass-like catch of light)
-          Positioned(
-            top: 0, left: 22, right: 22,
-            child: Container(
-              height: 1.4,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

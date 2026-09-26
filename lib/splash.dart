@@ -284,10 +284,17 @@ child: Stack(
             ),
           ],
         ),
-        child: const Icon(
-          Icons.wifi_rounded,
-          size: 70,
-          color: JC.primary,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(40),
+          child: Image.asset(
+            'assets/logo/jajnet-logo.png',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.wifi_rounded,
+              size: 70,
+              color: JC.primary,
+            ),
+          ),
         ),
       ),
     ),

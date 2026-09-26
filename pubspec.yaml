@@ -33,12 +33,13 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/logo/jajnet-logo.png
     - assets/fonts/SolaimanLipi.ttf
 
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/icon/app_icon.png"
-  adaptive_icon_background: "#FF7A1A"
-  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  image_path: "assets/logo/jajnet-logo.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/logo/jajnet-logo.png"
   min_sdk_android: 21
