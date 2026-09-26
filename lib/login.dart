@@ -97,8 +97,8 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       ).listen(
         (event) {
           // Mild filter — keep response quick but remove jitter
-          _gx = _gx * 0.65 + event.x * 0.35;
-          _gy = _gy * 0.65 + event.y * 0.35;
+          _gx = _gx * 0.80 + event.x * 0.20;
+          _gy = _gy * 0.80 + event.y * 0.20;
         },
         onError: (_) {},
         cancelOnError: false,
@@ -941,10 +941,10 @@ class _SurfacePainter extends CustomPainter {
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: const [
-        Color(0xFFCDE8F5),
-        Color(0xFF7CB6D9),
-        Color(0xFF2E6F9E),
-        Color(0xFF123D63),
+        Color(0xFFE8F4FB),
+        Color(0xFFB8DCEF),
+        Color(0xFF5FA3CC),
+        Color(0xFF1F5B8A),
       ],
       stops: const [0.0, 0.35, 0.75, 1.0],
     ).createShader(Rect.fromLTWH(0, baseY - 70, size.width, size.height));
@@ -989,39 +989,19 @@ class _SurfacePainter extends CustomPainter {
       );
     }
 
-    // Dark band just below surface (real water signature)
-    final darkBand = Path.from(surfacePath);
-    darkBand.lineTo(size.width, baseY + 20);
-    darkBand.lineTo(0, baseY + 20);
-    darkBand.close();
-    canvas.save();
-    canvas.clipPath(darkBand);
-    canvas.drawRect(
-      Rect.fromLTWH(0, baseY - 20, size.width, 60),
-      Paint()
-        ..color = const Color(0xFF4A8FC0).withOpacity(0.22)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
-    );
-    canvas.restore();
 
     // Surface line — layered glow
     canvas.drawPath(surfacePath,
         Paint()
-          ..color = Colors.white.withOpacity(0.35)
+          ..color = Colors.white.withOpacity(0.45)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 16
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9));
-    canvas.drawPath(surfacePath,
-        Paint()
-          ..color = Colors.white.withOpacity(0.75)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 5
+          ..strokeWidth = 4
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
     canvas.drawPath(surfacePath,
         Paint()
-          ..color = Colors.white
+          ..color = Colors.white.withOpacity(0.85)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.4);
+          ..strokeWidth = 1.2);
 
     // Moving specular glints on surface
     for (int i = 0; i < 3; i++) {

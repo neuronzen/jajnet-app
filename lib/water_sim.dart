@@ -15,17 +15,18 @@ class WaterSim {
   final List<double> accel = List.filled(N, 0.0);
 
   // Physics params (tuned for real water feel)
-  static const double WAVE_K = 0.18;
-  static const double TILT_K = 0.045;
-  static const double DAMPING = 0.965;
-  static const double MAX_POS = 55.0;
-  static const double MAX_VEL = 12.0;
+  static const double WAVE_K = 0.16;
+  static const double TILT_K = 0.035;
+  static const double DAMPING = 0.93;
+  static const double MAX_POS = 35.0;
+  static const double MAX_VEL = 6.0;
 
   double _smoothTilt = 0.0;
 
   void step(double dt, double tiltGx) {
     // Smooth sensor noise on tilt input
-    _smoothTilt = _smoothTilt * 0.82 + tiltGx * 0.18;
+    _smoothTilt = _smoothTilt * 0.88 + tiltGx * 0.12;
+    if (_smoothTilt.abs() < 0.03) _smoothTilt = 0;
 
     // Frame-rate normalisation (reference 60 Hz)
     final df = (dt * 60.0).clamp(0.0, 2.0);
@@ -35,7 +36,7 @@ class WaterSim {
 
     for (int i = 0; i < N; i++) {
       // Target height so surface forms a slope matching the tilt
-      final target = _smoothTilt * 220.0 * (i - center) / N;
+      final target = -_smoothTilt * 170.0 * (i - center) / N;
 
       // Spring toward tilted baseline
       accel[i] = (target - pos[i]) * TILT_K;
