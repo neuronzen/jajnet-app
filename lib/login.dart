@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -31,10 +32,23 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   late final AnimationController _bob;
 
   StreamSubscription? _accelSub;
-  double _targetX = 0;
-  double _targetY = 0;
-  double _smoothX = 0;
-  double _smoothY = 0;
+
+  // Filtered gravity vector (heavy low-pass)
+  double _gx = 0;
+  double _gy = 9.8;
+
+  // Water surface angle (radians) — spring-damper output
+  double _surfaceAngle = 0;
+  double _surfaceVel = 0;
+
+  // Wave energy (0 calm, 1+ sloshing)
+  double _waveEnergy = 0;
+  double _wavePhase = 0;
+
+  // Physics ticker
+  late final Ticker _ticker;
+  Duration _lastTick = Duration.zero;
+  final ValueNotifier<int> _repaint = ValueNotifier<int>(0);
 
   @override
   void initState() {
@@ -56,41 +70,75 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       duration: const Duration(milliseconds: 2800),
     )..repeat();
 
-    _wave.addListener(() {
-      // Low-pass filter for smooth tilt response
-      _smoothX += (_targetX - _smoothX) * 0.12;
-      _smoothY += (_targetY - _smoothY) * 0.12;
-    });
-
+    _ticker = createTicker(_onPhysicsTick)..start();
     _startSensors();
+  }
+
+  void _onPhysicsTick(Duration elapsed) {
+    if (_lastTick == Duration.zero) {
+      _lastTick = elapsed;
+      return;
+    }
+    double dt = (elapsed - _lastTick).inMicroseconds / 1e6;
+    _lastTick = elapsed;
+    if (dt <= 0 || dt > 0.15) {
+      _repaint.value++;
+      return;
+    }
+
+    // Target surface angle from gravity vector.
+    // Real water surface is perpendicular to gravity.
+    final safeGy = _gy.abs() < 0.5 ? (_gy >= 0 ? 0.5 : -0.5) : _gy;
+    final targetAngle = math.atan2(-_gx, safeGy);
+
+    // Spring-damper — inertia, overshoot, oscillation
+    const kSpring = 30.0;
+    const cDamp = 2.2;
+    final aAccel =
+        (targetAngle - _surfaceAngle) * kSpring - _surfaceVel * cDamp;
+    _surfaceVel += aAccel * dt;
+    _surfaceAngle += _surfaceVel * dt;
+
+    // Wave energy decays (ripples die out like real water)
+    _waveEnergy *= math.pow(0.92, dt * 60).toDouble();
+    if (_waveEnergy < 0.004) _waveEnergy = 0;
+
+    _wavePhase += dt * 5.0;
+    _repaint.value++;
   }
 
   void _startSensors() {
     try {
       _accelSub = accelerometerEventStream().listen(
         (event) {
-          // Portrait baseline: (0, 9.8, 0)
-          // Tilt left/right changes x; tilt forward/back changes y
-          final nx = (event.x / 9.8).clamp(-1.0, 1.0);
-          final ny = ((event.y - 9.8) / 9.8).clamp(-1.0, 1.0);
-          _targetX = nx;
-          _targetY = ny;
+          // Heavy low-pass — keep slow tilt, discard shake noise
+          _gx = _gx * 0.90 + event.x * 0.10;
+          _gy = _gy * 0.90 + event.y * 0.10;
+
+          // Shake detection from raw magnitude deviation
+          final mag = math.sqrt(event.x * event.x +
+              event.y * event.y + event.z * event.z);
+          final deviation = (mag - 9.8).abs();
+          if (deviation > 0.5) {
+            _waveEnergy =
+                math.min(_waveEnergy + deviation * 0.018, 2.5);
+          }
         },
         onError: (_) {},
         cancelOnError: false,
       );
-    } catch (_) {
-      // Sensors not available — tilt stays at 0, waves still animate
-    }
+    } catch (_) {}
   }
 
   @override
   void dispose() {
+    _ticker.dispose();
     _accelSub?.cancel();
     _entrance.dispose();
     _aurora.dispose();
     _wave.dispose();
     _bob.dispose();
+    _repaint.dispose();
     _email.dispose();
     _pass.dispose();
     super.dispose();
@@ -348,13 +396,13 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   // ============ LIQUID LAYER (real water physics) ============
   Widget _waterLayer() {
     return AnimatedBuilder(
-      animation: Listenable.merge([_wave, _bob]),
+      animation: _repaint,
       builder: (_, __) {
         return CustomPaint(
           painter: _LiquidPainter(
-            time: _wave.value,
-            tiltX: _smoothX,
-            tiltY: _smoothY,
+            surfaceAngle: _surfaceAngle,
+            waveEnergy: _waveEnergy,
+            wavePhase: _wavePhase,
           ),
         );
       },
@@ -370,16 +418,14 @@ class _LoginScreenNewState extends State<LoginScreenNew>
 
   Widget _floatingLogo() {
     return AnimatedBuilder(
-      animation: Listenable.merge([_wave, _bob]),
+      animation: Listenable.merge([_bob, _repaint]),
       builder: (_, __) {
         final t = _bob.value * math.pi * 2;
-        final bob = math.sin(t) * 6.5;
-        final ampX = _amplifyTilt(_smoothX);
-        final ampY = _amplifyTilt(_smoothY);
-        final surfaceSlope = -ampX * 0.22;
-        final tiltDx = ampX * 65;
-        final tiltDy = ampY * 30;
-        final rot = surfaceSlope;
+        final bobAmp = 5.0 + _waveEnergy.clamp(0.0, 1.0) * 8.0;
+        final bob = math.sin(t) * bobAmp;
+        final tiltDx = _gx * 4.0;
+        final tiltDy = -(_gy - 9.8) * 2.0;
+        final rot = _surfaceAngle * 0.85;
 
         return Transform.translate(
           offset: Offset(tiltDx, bob + tiltDy),
@@ -389,43 +435,34 @@ class _LoginScreenNewState extends State<LoginScreenNew>
               alignment: Alignment.center,
               children: [
                 Container(
-                  width: 175,
-                  height: 175,
+                  width: 175, height: 175,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        Colors.white.withOpacity(0.42),
-                        Colors.white.withOpacity(0.0),
-                      ],
-                    ),
+                    gradient: RadialGradient(colors: [
+                      Colors.white.withOpacity(0.42),
+                      Colors.white.withOpacity(0.0),
+                    ]),
                   ),
                 ),
                 Container(
-                  width: 108,
-                  height: 108,
+                  width: 108, height: 108,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white.withOpacity(0.15),
                     border: Border.all(
                       color: Colors.white.withOpacity(0.22),
-                      width: 1.2,
-                    ),
+                      width: 1.2),
                   ),
                   child: Center(
                     child: Container(
-                      width: 84,
-                      height: 84,
+                      width: 84, height: 84,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF0F172A).withOpacity(0.28),
-                            blurRadius: 22,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+                        boxShadow: [BoxShadow(
+                          color: const Color(0xFF0F172A).withOpacity(0.28),
+                          blurRadius: 22,
+                          offset: const Offset(0, 10))],
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(24),
@@ -436,9 +473,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.wifi_rounded,
-                              size: 40,
-                              color: JC.primary,
-                            ),
+                              size: 40, color: JC.primary),
                           ),
                         ),
                       ),
@@ -859,121 +894,141 @@ class _HeaderClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-// ===== LIQUID PAINTER (real water physics) =====
+// ===== LIQUID PAINTER — real water =====
 class _LiquidPainter extends CustomPainter {
-  final double time;
-  final double tiltX;
-  final double tiltY;
+  final double surfaceAngle;
+  final double waveEnergy;
+  final double wavePhase;
 
   _LiquidPainter({
-    required this.time,
-    required this.tiltX,
-    required this.tiltY,
+    required this.surfaceAngle,
+    required this.waveEnergy,
+    required this.wavePhase,
   });
-
-  double _amp(double v) {
-    final a = v.abs();
-    if (a < 0.02) return 0;
-    return v.sign * math.pow(a, 0.55).toDouble();
-  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final ampX = _amp(tiltX);
-    final ampY = _amp(tiltY);
-
-    // Real liquid physics: surface stays level to ground,
-    // so on tilted screen it slopes OPPOSITE to phone tilt.
-    final slope = -ampX * 0.25;
-    final surfaceBaseY = size.height * 0.58 + ampY * 40;
+    final baseY = size.height * 0.80;
+    final slope = math.tan(surfaceAngle.clamp(-1.2, 1.2));
     final centerX = size.width / 2;
-
-    final phase = time * 2 * math.pi;
+    final amp = waveEnergy.clamp(0.0, 1.5);
 
     double surfaceY(double x) {
       final dx = x - centerX;
-      final line = surfaceBaseY + dx * slope;
-      // Small ripples
-      final w1 = math.sin(x * 0.012 + phase * 1.0) * 4.5;
-      final w2 = math.sin(x * 0.024 - phase * 0.85) * 2.8;
-      final w3 = math.sin(x * 0.042 + phase * 1.6) * 1.5;
-      return line + w1 + w2 + w3;
+      final line = baseY + dx * slope;
+      final w1 = math.sin(x * 0.007 + wavePhase * 1.1) * 11.0 * amp;
+      final w2 = math.sin(x * 0.018 - wavePhase * 1.7) * 5.5 * amp;
+      final w3 = math.sin(x * 0.040 + wavePhase * 0.9) * 2.6 * amp;
+      final w4 = math.sin(x * 0.085 - wavePhase * 2.3) * 1.2 * amp;
+      final edgeDist = math.min(x, size.width - x);
+      final meniscus = edgeDist < 45
+          ? -math.pow((45 - edgeDist) / 45, 2).toDouble() * 12
+          : 0.0;
+      return line + w1 + w2 + w3 + w4 + meniscus;
     }
 
-    // === Water body (translucent fill) ===
+    // WATER BODY
     final waterPath = Path();
     waterPath.moveTo(0, surfaceY(0));
-    for (double x = 0; x <= size.width; x += 4) {
+    for (double x = 0; x <= size.width; x += 3) {
       waterPath.lineTo(x, surfaceY(x));
     }
     waterPath.lineTo(size.width, size.height);
     waterPath.lineTo(0, size.height);
     waterPath.close();
 
-    final waterShader = LinearGradient(
+    final shader = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        Colors.white.withOpacity(0.08),
-        Colors.white.withOpacity(0.22),
+        const Color(0xFFA8D4E6).withOpacity(0.60),
+        const Color(0xFF6BA3BE).withOpacity(0.55),
+        const Color(0xFF3D6F87).withOpacity(0.72),
       ],
-    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+      stops: const [0.0, 0.40, 1.0],
+    ).createShader(Rect.fromLTWH(0, baseY - 60, size.width, size.height));
+    canvas.drawPath(waterPath, Paint()..shader = shader);
 
-    canvas.drawPath(waterPath, Paint()..shader = waterShader);
-
-    // === Deeper band (subtle depth) ===
-    final deepPath = Path();
-    deepPath.moveTo(0, surfaceY(0) + 35);
-    for (double x = 0; x <= size.width; x += 4) {
-      deepPath.lineTo(x, surfaceY(x) + 35);
+    // DEEP GLOW
+    final deep = Path();
+    deep.moveTo(0, surfaceY(0) + 10);
+    for (double x = 0; x <= size.width; x += 3) {
+      deep.lineTo(x, surfaceY(x) + 10);
     }
-    deepPath.lineTo(size.width, size.height);
-    deepPath.lineTo(0, size.height);
-    deepPath.close();
-    canvas.drawPath(
-        deepPath, Paint()..color = Colors.white.withOpacity(0.05));
+    deep.lineTo(size.width, size.height);
+    deep.lineTo(0, size.height);
+    deep.close();
+    canvas.drawPath(deep, Paint()
+      ..color = const Color(0xFF7ED3F0).withOpacity(0.22)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14));
 
-    // === Surface line ===
-    final linePath = Path();
-    for (double x = 0; x <= size.width; x += 4) {
+    // CAUSTICS
+    final causticIntensity = 0.10 + amp * 0.14;
+    for (int i = 0; i < 7; i++) {
+      final bx = (i / 6) * size.width +
+          math.sin(wavePhase * 0.5 + i * 1.7) * 60;
+      final by = baseY + 30 + i * 20 +
+          math.cos(wavePhase * 0.35 + i) * 14;
+      final r = 30.0 + (i % 4) * 22;
+      canvas.drawCircle(Offset(bx, by), r, Paint()
+        ..shader = RadialGradient(colors: [
+          Colors.white.withOpacity(causticIntensity),
+          Colors.white.withOpacity(0.0),
+        ]).createShader(Rect.fromCircle(center: Offset(bx, by), radius: r)));
+    }
+
+    // BUBBLES
+    for (int i = 0; i < 6; i++) {
+      final bx = ((i * 97 + 37) % size.width.toInt()).toDouble();
+      final cycle = (wavePhase * 0.15 + i * 0.17) % 1.0;
+      final by = baseY + 40 + (1 - cycle) * (size.height - baseY - 40);
+      final br = 1.5 + (i % 3) * 0.8;
+      final bo = 0.14 + (1 - cycle) * 0.22;
+      canvas.drawCircle(Offset(bx, by), br, Paint()
+        ..color = Colors.white.withOpacity(bo)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8);
+    }
+
+    // SURFACE
+    final sPath = Path();
+    for (double x = 0; x <= size.width; x += 3) {
       final y = surfaceY(x);
-      if (x == 0) {
-        linePath.moveTo(x, y);
-      } else {
-        linePath.lineTo(x, y);
-      }
+      if (x == 0) { sPath.moveTo(x, y); } else { sPath.lineTo(x, y); }
     }
+    canvas.drawPath(sPath, Paint()
+      ..color = const Color(0xFFB8E4F5).withOpacity(0.42)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 20
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12));
+    canvas.drawPath(sPath, Paint()
+      ..color = Colors.white.withOpacity(0.60)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
+    canvas.drawPath(sPath, Paint()
+      ..color = Colors.white.withOpacity(0.85)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.1);
 
-    // Soft glow above line
-    canvas.drawPath(
-        linePath,
-        Paint()
-          ..color = Colors.white.withOpacity(0.5)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 5.0
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
-
-    // Sharp bright line
-    canvas.drawPath(
-        linePath,
-        Paint()
-          ..color = Colors.white.withOpacity(0.85)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.6);
-
-    // === Foam highlights ===
-    final foamPaint = Paint()..color = Colors.white.withOpacity(0.6);
-    for (int i = 0; i < 14; i++) {
-      final fx = (i / 14) * size.width + math.sin(phase + i * 0.9) * 20;
-      final fy =
-          surfaceY(fx) - 2 - (math.sin(phase * 2 + i)).abs() * 2.5;
-      canvas.drawCircle(Offset(fx, fy), 1.3, foamPaint);
+    // SPECULAR
+    for (int i = 0; i < 3; i++) {
+      final sx = size.width * (0.22 + i * 0.28) +
+          math.sin(wavePhase * 1.3 + i * 2) * 45;
+      final sy = surfaceY(sx) - 2;
+      canvas.drawCircle(Offset(sx, sy), 6.0, Paint()
+        ..shader = RadialGradient(colors: [
+          Colors.white.withOpacity(0.80),
+          Colors.white.withOpacity(0.0),
+        ]).createShader(Rect.fromCircle(center: Offset(sx, sy), radius: 6)));
     }
   }
 
   @override
   bool shouldRepaint(covariant _LiquidPainter old) =>
-      old.time != time || old.tiltX != tiltX || old.tiltY != tiltY;
+      old.surfaceAngle != surfaceAngle ||
+      old.waveEnergy != waveEnergy ||
+      old.wavePhase != wavePhase;
 }
 
 // ===== SIGNUP (unchanged) =====
