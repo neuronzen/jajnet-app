@@ -95,8 +95,11 @@ void main() {
     waterCol = mix(waterCol, vec3(1.0, 0.55, 0.15), fresnel * 0.28);
 
     // Surface highlight line
-    float lineMask = exp(-pow(below / 2.5, 2.0));
-    waterCol = mix(waterCol, vec3(0.95, 0.99, 1.0), lineMask * 0.65);
+    // Soft surface glow — layered
+    float lineMask1 = exp(-pow(below / 8.0, 2.0));
+    float lineMask2 = exp(-pow(below / 2.0, 2.0));
+    waterCol = mix(waterCol, vec3(0.55, 0.85, 1.0), lineMask1 * 0.35);
+    waterCol = mix(waterCol, vec3(0.95, 0.99, 1.0), lineMask2 * 0.55);
 
     // Moving specular glint
     float glintX = mod(uTime * 30.0 + uSize.x * 0.25, uSize.x * 1.4)

@@ -46,6 +46,10 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   double _waveEnergy = 0;
   double _wavePhase = 0;
 
+  // Floating logo drift (buoy position + velocity)
+  double _logoX = 0;
+  double _logoXVel = 0;
+
   // Physics ticker
   late final Ticker _ticker;
   Duration _lastTick = Duration.zero;
@@ -119,6 +123,17 @@ class _LoginScreenNewState extends State<LoginScreenNew>
     // Wave energy decays (ripples die out like real water)
     _waveEnergy *= math.pow(0.92, dt * 60).toDouble();
     if (_waveEnergy < 0.004) _waveEnergy = 0;
+
+    // === LOGO BUOY DRIFT ===
+    // In a tilted jar, a floating object drifts toward the LOWER side.
+    // Real liquid has inertia — overshoots, then settles.
+    final slope = math.tan(_surfaceAngle.clamp(-1.1, 1.1));
+    final targetX = slope * 90.0; // drift toward lower side
+    const kLogoSpring = 18.0;
+    const cLogoDamp = 2.4;
+    final aX = (targetX - _logoX) * kLogoSpring - _logoXVel * cLogoDamp;
+    _logoXVel += aX * dt;
+    _logoX += _logoXVel * dt;
 
     _wavePhase += dt * 5.0;
     _repaint.value++;
@@ -259,51 +274,54 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Color(0xFFC94400),
-                      Color(0xFFE55A00),
-                      Color(0xFFFF6B00),
-                      Color(0xFFFF8A3D),
+                      Color(0xFF0A1420),
+                      Color(0xFF0F1F33),
+                      Color(0xFF0A1A2E),
                     ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
                 ),
                 child: Stack(
                   children: [
                     // Aurora blobs
                     Positioned.fill(child: _auroraLayer()),
-                    // Diagonal gold lines
-                    Positioned.fill(child: _diagonalGoldLines()),
+                    // (diagonal gold lines removed — jar aesthetic)
                     // Water waves layer
                     Positioned.fill(child: _waterLayer()),
-                    // Top right corner accent
-                    Positioned(
-                      top: -80, right: -60,
-                      child: Container(
-                        width: 220, height: 220,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.13),
-                            width: 1.4,
-                          ),
-                        ),
-                      ),
-                    ),
+                    // (top-right corner accent removed)
                     // Center content
                     Positioned.fill(
                       child: SafeArea(
                         bottom: false,
-                        child: Padding(
-                          padding: EdgeInsets.only(bottom: headerH * 0.14),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _fade(_floatingLogo(), 0.0),
-                              const SizedBox(height: 20),
-                              _fade(_brandBlock(), 0.15),
-                            ],
-                          ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final h = constraints.maxHeight;
+                            return Stack(
+                              children: [
+                                // Logo floats at water surface (55% of jar)
+                                Positioned(
+                                  top: h * 0.55 - 90,
+                                  left: 0,
+                                  right: 0,
+                                  child: _fade(
+                                    Center(child: _floatingLogo()),
+                                    0.0,
+                                  ),
+                                ),
+                                // Brand text sits inside water
+                                Positioned(
+                                  top: h * 0.62,
+                                  left: 0,
+                                  right: 0,
+                                  child: _fade(
+                                    Center(child: _brandBlock()),
+                                    0.15,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -444,11 +462,12 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       animation: Listenable.merge([_bob, _repaint]),
       builder: (_, __) {
         final t = _bob.value * math.pi * 2;
-        final bobAmp = 5.0 + _waveEnergy.clamp(0.0, 1.0) * 8.0;
+        final bobAmp = 4.5 + _waveEnergy.clamp(0.0, 1.0) * 7.0;
         final bob = math.sin(t) * bobAmp;
-        final tiltDx = _gx * 4.0;
-        final tiltDy = -(_gy - 9.8) * 2.0;
-        final rot = _surfaceAngle * 0.85;
+        // Logo drifts along water surface (buoy physics)
+        final tiltDx = _logoX;
+        final tiltDy = -(_gy - 9.8) * 1.5;
+        final rot = _surfaceAngle * 0.9;
 
         return Transform.translate(
           offset: Offset(tiltDx, bob + tiltDy),
@@ -523,17 +542,17 @@ class _LoginScreenNewState extends State<LoginScreenNew>
             Positioned(
               left: -70 + 50 * math.sin(r),
               top: -40 + 40 * math.cos(r),
-              child: _blob(260, const Color(0xFFFFB547).withOpacity(0.22)),
+              child: _blob(260, const Color(0xFF66BBFF).withOpacity(0.09)),
             ),
             Positioned(
               right: -80 + 60 * math.cos(r + 1.6),
               bottom: -60 + 30 * math.sin(r + 1.6),
-              child: _blob(240, Colors.white.withOpacity(0.10)),
+              child: _blob(240, Colors.white.withOpacity(0.04)),
             ),
             Positioned(
               right: 30 + 40 * math.sin(r + 3.2),
               top: 10 + 30 * math.cos(r + 3.2),
-              child: _blob(200, const Color(0xFFFFD54F).withOpacity(0.14)),
+              child: _blob(200, const Color(0xFF88DDFF).withOpacity(0.07)),
             ),
           ],
         );
