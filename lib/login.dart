@@ -345,13 +345,13 @@ class _LoginScreenNewState extends State<LoginScreenNew>
     );
   }
 
-  // ============ WATER LAYER ============
+  // ============ LIQUID LAYER (real water physics) ============
   Widget _waterLayer() {
     return AnimatedBuilder(
-      animation: _wave,
+      animation: Listenable.merge([_wave, _bob]),
       builder: (_, __) {
         return CustomPaint(
-          painter: _WaterPainter(
+          painter: _LiquidPainter(
             time: _wave.value,
             tiltX: _smoothX,
             tiltY: _smoothY,
@@ -373,13 +373,13 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       animation: Listenable.merge([_wave, _bob]),
       builder: (_, __) {
         final t = _bob.value * math.pi * 2;
-        final bob = math.sin(t) * 8.5;
-        // Boost small tilt values non-linearly so even 15° tilt is visible
+        final bob = math.sin(t) * 6.5;
         final ampX = _amplifyTilt(_smoothX);
         final ampY = _amplifyTilt(_smoothY);
-        final tiltDx = ampX * 90;
-        final tiltDy = ampY * 45;
-        final rot = ampX * 0.22;
+        final surfaceSlope = -ampX * 0.22;
+        final tiltDx = ampX * 65;
+        final tiltDy = ampY * 30;
+        final rot = surfaceSlope;
 
         return Transform.translate(
           offset: Offset(tiltDx, bob + tiltDy),
@@ -388,7 +388,6 @@ class _LoginScreenNewState extends State<LoginScreenNew>
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Soft glow
                 Container(
                   width: 175,
                   height: 175,
@@ -402,7 +401,6 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                     ),
                   ),
                 ),
-                // Logo card
                 Container(
                   width: 108,
                   height: 108,
@@ -861,61 +859,120 @@ class _HeaderClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-// ===== WATER PAINTER =====
-class _WaterPainter extends CustomPainter {
+// ===== LIQUID PAINTER (real water physics) =====
+class _LiquidPainter extends CustomPainter {
   final double time;
   final double tiltX;
   final double tiltY;
 
-  _WaterPainter({
+  _LiquidPainter({
     required this.time,
     required this.tiltX,
     required this.tiltY,
   });
 
+  double _amp(double v) {
+    final a = v.abs();
+    if (a < 0.02) return 0;
+    return v.sign * math.pow(a, 0.55).toDouble();
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
-    for (int layer = 0; layer < 3; layer++) {
-      final phaseShift = layer * 0.7;
-      final speed = 0.8 + layer * 0.22;
-      final amp = 5.0 + layer * 3.5;
-      final ampY2 = tiltY.abs() < 0.03
-          ? 0.0
-          : tiltY.sign * math.pow(tiltY.abs(), 0.55);
-      final baseY = size.height * 0.52 + layer * 20 + ampY2 * 55;
-      final opacity = 0.12 + layer * 0.05;
+    final ampX = _amp(tiltX);
+    final ampY = _amp(tiltY);
 
-      final paint = Paint()
-        ..color = Colors.white.withOpacity(opacity)
-        ..style = PaintingStyle.fill;
+    // Real liquid physics: surface stays level to ground,
+    // so on tilted screen it slopes OPPOSITE to phone tilt.
+    final slope = -ampX * 0.25;
+    final surfaceBaseY = size.height * 0.58 + ampY * 40;
+    final centerX = size.width / 2;
 
-      final path = Path();
-      path.moveTo(0, baseY);
+    final phase = time * 2 * math.pi;
 
-      final phase = time * speed * 2 * math.pi + phaseShift;
-      final ampX2 = tiltX.abs() < 0.03
-          ? 0.0
-          : tiltX.sign * math.pow(tiltX.abs(), 0.55);
-      final horizShift = ampX2 * 200;
+    double surfaceY(double x) {
+      final dx = x - centerX;
+      final line = surfaceBaseY + dx * slope;
+      // Small ripples
+      final w1 = math.sin(x * 0.012 + phase * 1.0) * 4.5;
+      final w2 = math.sin(x * 0.024 - phase * 0.85) * 2.8;
+      final w3 = math.sin(x * 0.042 + phase * 1.6) * 1.5;
+      return line + w1 + w2 + w3;
+    }
 
-      for (double x = 0; x <= size.width; x += 5) {
-        final normX = (x + horizShift) / size.width;
-        final y = baseY +
-            math.sin(normX * 2 * math.pi * 1.4 + phase) * amp +
-            math.sin(normX * 2 * math.pi * 0.7 + phase * 0.7) * amp * 0.4;
-        path.lineTo(x, y);
+    // === Water body (translucent fill) ===
+    final waterPath = Path();
+    waterPath.moveTo(0, surfaceY(0));
+    for (double x = 0; x <= size.width; x += 4) {
+      waterPath.lineTo(x, surfaceY(x));
+    }
+    waterPath.lineTo(size.width, size.height);
+    waterPath.lineTo(0, size.height);
+    waterPath.close();
+
+    final waterShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Colors.white.withOpacity(0.08),
+        Colors.white.withOpacity(0.22),
+      ],
+    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    canvas.drawPath(waterPath, Paint()..shader = waterShader);
+
+    // === Deeper band (subtle depth) ===
+    final deepPath = Path();
+    deepPath.moveTo(0, surfaceY(0) + 35);
+    for (double x = 0; x <= size.width; x += 4) {
+      deepPath.lineTo(x, surfaceY(x) + 35);
+    }
+    deepPath.lineTo(size.width, size.height);
+    deepPath.lineTo(0, size.height);
+    deepPath.close();
+    canvas.drawPath(
+        deepPath, Paint()..color = Colors.white.withOpacity(0.05));
+
+    // === Surface line ===
+    final linePath = Path();
+    for (double x = 0; x <= size.width; x += 4) {
+      final y = surfaceY(x);
+      if (x == 0) {
+        linePath.moveTo(x, y);
+      } else {
+        linePath.lineTo(x, y);
       }
+    }
 
-      path.lineTo(size.width, size.height);
-      path.lineTo(0, size.height);
-      path.close();
+    // Soft glow above line
+    canvas.drawPath(
+        linePath,
+        Paint()
+          ..color = Colors.white.withOpacity(0.5)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5.0
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
 
-      canvas.drawPath(path, paint);
+    // Sharp bright line
+    canvas.drawPath(
+        linePath,
+        Paint()
+          ..color = Colors.white.withOpacity(0.85)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.6);
+
+    // === Foam highlights ===
+    final foamPaint = Paint()..color = Colors.white.withOpacity(0.6);
+    for (int i = 0; i < 14; i++) {
+      final fx = (i / 14) * size.width + math.sin(phase + i * 0.9) * 20;
+      final fy =
+          surfaceY(fx) - 2 - math.abs(math.sin(phase * 2 + i)) * 2.5;
+      canvas.drawCircle(Offset(fx, fy), 1.3, foamPaint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _WaterPainter old) =>
+  bool shouldRepaint(covariant _LiquidPainter old) =>
       old.time != time || old.tiltX != tiltX || old.tiltY != tiltY;
 }
 
