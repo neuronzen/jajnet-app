@@ -126,14 +126,6 @@ jobs:
               id "com.google.gms.google-services"
           }
 
-
-          // Load keystore properties
-          def keystoreProperties = new Properties()
-          def keystorePropertiesFile = rootProject.file('key.properties')
-          if (keystorePropertiesFile.exists()) {
-              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-          }
-
           def localProperties = new Properties()
           def localPropertiesFile = rootProject.file("local.properties")
           if (localPropertiesFile.exists()) {
@@ -149,17 +141,6 @@ jobs:
               namespace = "com.jajnet.customer"
               compileSdk = 35
               ndkVersion = flutter.ndkVersion
-
-              signingConfigs {
-                  release {
-                      if (keystorePropertiesFile.exists()) {
-                          keyAlias = keystoreProperties['keyAlias']
-                          keyPassword = keystoreProperties['keyPassword']
-                          storeFile = file(keystoreProperties['storeFile'])
-                          storePassword = keystoreProperties['storePassword']
-                      }
-                  }
-              }
 
               compileOptions {
                   sourceCompatibility = JavaVersion.VERSION_17
@@ -181,7 +162,8 @@ jobs:
 
               buildTypes {
                   release {
-                      signingConfig = signingConfigs.release
+                      // Temporary using debug signing for testing
+                      signingConfig = signingConfigs.debug
                       minifyEnabled = false
                       shrinkResources = false
                   }
@@ -248,7 +230,7 @@ jobs:
 
       - name: Place google-services.json
         run: cp google-services.json android/app/google-services.json
-        
+
       - name: Build APK
         run: flutter build apk --release
 
