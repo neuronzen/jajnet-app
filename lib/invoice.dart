@@ -411,8 +411,8 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                               ],
                             ),
                             Positioned(
-                              left: 4,
-                              top: 6,
+                              left: 0,
+                              top: 12,
                               child: _stampOverlay(
                                 isVerified
                                     ? 'PAID'
@@ -502,62 +502,47 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                               .isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(18, 4, 18, 12),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF2F2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: const Color(0xFFFECACA),
-                                  width: 1.5),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 34,
-                                  height: 34,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFDC2626)
-                                        .withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                      Icons.error_outline_rounded,
-                                      color: Color(0xFFDC2626),
-                                      size: 18),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 3,
+                                height: 42,
+                                margin: const EdgeInsets.only(top: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDC2626),
+                                  borderRadius: BorderRadius.circular(2),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'REJECTION REASON',
-                                        style: GoogleFonts.poppins(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800,
-                                            color: const Color(0xFF991B1B),
-                                            letterSpacing: 1.2,
-                                            height: 1.4),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        widget.payment['rejectedReason']
-                                            .toString(),
-                                        style: GoogleFonts.hindSiliguri(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: const Color(0xFF7F1D1D),
-                                            height: 1.5),
-                                      ),
-                                    ],
-                                  ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'REJECTION REASON',
+                                      style: GoogleFonts.poppins(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFFDC2626),
+                                          letterSpacing: 1.5,
+                                          height: 1.4),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      widget.payment['rejectedReason']
+                                          .toString(),
+                                      style: GoogleFonts.hindSiliguri(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF151A26),
+                                          height: 1.5),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       if (isRejected) const SizedBox(height: 12),
@@ -715,27 +700,27 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
 
   Widget _stampOverlay(String text, Color color) {
     return Transform.rotate(
-      angle: -0.18,
+      angle: -0.16,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          border: Border.all(color: color, width: 3),
-          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color, width: 4),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            border: Border.all(color: color.withOpacity(0.55), width: 1),
-            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: color.withOpacity(0.6), width: 1.5),
+            borderRadius: BorderRadius.circular(5),
           ),
           child: Text(
             text,
             style: GoogleFonts.poppins(
-              fontSize: 14,
+              fontSize: 20,
               fontWeight: FontWeight.w900,
               color: color,
-              letterSpacing: 2.5,
-              height: 1.1,
+              letterSpacing: 3.5,
+              height: 1.05,
             ),
           ),
         ),

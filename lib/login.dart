@@ -362,15 +362,24 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   }
 
   // ============ FLOATING LOGO with tilt + glow ============
+  double _amplifyTilt(double v) {
+    final a = v.abs();
+    if (a < 0.03) return 0;
+    return v.sign * math.pow(a, 0.55).toDouble();
+  }
+
   Widget _floatingLogo() {
     return AnimatedBuilder(
       animation: Listenable.merge([_wave, _bob]),
       builder: (_, __) {
         final t = _bob.value * math.pi * 2;
-        final bob = math.sin(t) * 7.5;
-        final tiltDx = _smoothX * 20;
-        final tiltDy = _smoothY * 12;
-        final rot = _smoothX * 0.09;
+        final bob = math.sin(t) * 8.5;
+        // Boost small tilt values non-linearly so even 15° tilt is visible
+        final ampX = _amplifyTilt(_smoothX);
+        final ampY = _amplifyTilt(_smoothY);
+        final tiltDx = ampX * 90;
+        final tiltDy = ampY * 45;
+        final rot = ampX * 0.22;
 
         return Transform.translate(
           offset: Offset(tiltDx, bob + tiltDy),
@@ -381,13 +390,13 @@ class _LoginScreenNewState extends State<LoginScreenNew>
               children: [
                 // Soft glow
                 Container(
-                  width: 165,
-                  height: 165,
+                  width: 175,
+                  height: 175,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        Colors.white.withOpacity(0.38),
+                        Colors.white.withOpacity(0.42),
                         Colors.white.withOpacity(0.0),
                       ],
                     ),
@@ -870,8 +879,11 @@ class _WaterPainter extends CustomPainter {
       final phaseShift = layer * 0.7;
       final speed = 0.8 + layer * 0.22;
       final amp = 5.0 + layer * 3.5;
-      final baseY = size.height * 0.52 + layer * 20 + tiltY * 22;
-      final opacity = 0.11 + layer * 0.045;
+      final ampY2 = tiltY.abs() < 0.03
+          ? 0.0
+          : tiltY.sign * math.pow(tiltY.abs(), 0.55);
+      final baseY = size.height * 0.52 + layer * 20 + ampY2 * 55;
+      final opacity = 0.12 + layer * 0.05;
 
       final paint = Paint()
         ..color = Colors.white.withOpacity(opacity)
@@ -881,7 +893,10 @@ class _WaterPainter extends CustomPainter {
       path.moveTo(0, baseY);
 
       final phase = time * speed * 2 * math.pi + phaseShift;
-      final horizShift = tiltX * 75;
+      final ampX2 = tiltX.abs() < 0.03
+          ? 0.0
+          : tiltX.sign * math.pow(tiltX.abs(), 0.55);
+      final horizShift = ampX2 * 200;
 
       for (double x = 0; x <= size.width; x += 5) {
         final normX = (x + horizShift) / size.width;
