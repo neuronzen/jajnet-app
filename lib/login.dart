@@ -28,6 +28,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   late final AnimationController _entrance;
   late final AnimationController _aurora;
   late final AnimationController _wave;
+  late final AnimationController _bob;
 
   StreamSubscription? _accelSub;
   double _targetX = 0;
@@ -50,11 +51,15 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       vsync: this,
       duration: const Duration(seconds: 8),
     )..repeat();
+    _bob = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    )..repeat();
 
     _wave.addListener(() {
       // Low-pass filter for smooth tilt response
-      _smoothX += (_targetX - _smoothX) * 0.08;
-      _smoothY += (_targetY - _smoothY) * 0.08;
+      _smoothX += (_targetX - _smoothX) * 0.12;
+      _smoothY += (_targetY - _smoothY) * 0.12;
     });
 
     _startSensors();
@@ -62,11 +67,12 @@ class _LoginScreenNewState extends State<LoginScreenNew>
 
   void _startSensors() {
     try {
-      _accelSub = userAccelerometerEventStream().listen(
+      _accelSub = accelerometerEventStream().listen(
         (event) {
-          // event gives acceleration minus gravity, roughly -10..10 m/s²
+          // Portrait baseline: (0, 9.8, 0)
+          // Tilt left/right changes x; tilt forward/back changes y
           final nx = (event.x / 9.8).clamp(-1.0, 1.0);
-          final ny = (event.y / 9.8).clamp(-1.0, 1.0);
+          final ny = ((event.y - 9.8) / 9.8).clamp(-1.0, 1.0);
           _targetX = nx;
           _targetY = ny;
         },
@@ -84,6 +90,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
     _entrance.dispose();
     _aurora.dispose();
     _wave.dispose();
+    _bob.dispose();
     _email.dispose();
     _pass.dispose();
     super.dispose();
@@ -357,13 +364,13 @@ class _LoginScreenNewState extends State<LoginScreenNew>
   // ============ FLOATING LOGO with tilt + glow ============
   Widget _floatingLogo() {
     return AnimatedBuilder(
-      animation: _wave,
+      animation: Listenable.merge([_wave, _bob]),
       builder: (_, __) {
-        final t = _wave.value * math.pi * 2;
-        final bob = math.sin(t) * 4.5;
-        final tiltDx = _smoothX * 14;
-        final tiltDy = _smoothY * 7;
-        final rot = _smoothX * 0.06;
+        final t = _bob.value * math.pi * 2;
+        final bob = math.sin(t) * 7.5;
+        final tiltDx = _smoothX * 20;
+        final tiltDy = _smoothY * 12;
+        final rot = _smoothX * 0.09;
 
         return Transform.translate(
           offset: Offset(tiltDx, bob + tiltDy),
@@ -863,8 +870,8 @@ class _WaterPainter extends CustomPainter {
       final phaseShift = layer * 0.7;
       final speed = 0.8 + layer * 0.22;
       final amp = 5.0 + layer * 3.5;
-      final baseY = size.height * 0.52 + layer * 20 + tiltY * 10;
-      final opacity = 0.10 + layer * 0.04;
+      final baseY = size.height * 0.52 + layer * 20 + tiltY * 22;
+      final opacity = 0.11 + layer * 0.045;
 
       final paint = Paint()
         ..color = Colors.white.withOpacity(opacity)
@@ -874,7 +881,7 @@ class _WaterPainter extends CustomPainter {
       path.moveTo(0, baseY);
 
       final phase = time * speed * 2 * math.pi + phaseShift;
-      final horizShift = tiltX * 45;
+      final horizShift = tiltX * 75;
 
       for (double x = 0; x <= size.width; x += 5) {
         final normX = (x + horizShift) / size.width;

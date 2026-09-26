@@ -386,25 +386,44 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                           height: 1,
                           color: const Color(0xFFF0F0F0)),
 
-                      // TOTALS
+                      // TOTALS + STAMP
                       Padding(
                         padding: const EdgeInsets.fromLTRB(18, 12, 18, 6),
-                        child: Column(
+                        child: Stack(
                           children: [
-                            _totalLine('Subtotal', '৳$grossAmount'),
-                            if (monthlyDiscount > 0)
-                              _totalLine('Discount', '- ৳$monthlyDiscount'),
-                            if (previousDue > 0)
-                              _totalLine('Previous Due', '৳$previousDue'),
-                            _totalLine('Total', '৳$subtotal'),
-                            if (isVerified)
-                              _totalLine('Paid', '৳$paid')
-                            else if (isPending)
-                              _totalLine('Claimed', '৳$paid (pending)')
-                            else
-                              _totalLine('Paid', '৳0'),
-                            if (isVerified && totalDue > 0)
-                              _totalLine('Remaining', '৳$totalDue'),
+                            Column(
+                              children: [
+                                _totalLine('Subtotal', '৳$grossAmount'),
+                                if (monthlyDiscount > 0)
+                                  _totalLine(
+                                      'Discount', '- ৳$monthlyDiscount'),
+                                if (previousDue > 0)
+                                  _totalLine('Previous Due', '৳$previousDue'),
+                                _totalLine('Total', '৳$subtotal'),
+                                if (isVerified)
+                                  _totalLine('Paid', '৳$paid')
+                                else if (isPending)
+                                  _totalLine('Claimed', '৳$paid (pending)')
+                                else
+                                  _totalLine('Paid', '৳0'),
+                                if (isVerified && totalDue > 0)
+                                  _totalLine('Remaining', '৳$totalDue'),
+                              ],
+                            ),
+                            Positioned(
+                              left: 4,
+                              top: 6,
+                              child: _stampOverlay(
+                                isVerified
+                                    ? 'PAID'
+                                    : (isPending ? 'PENDING' : 'REJECTED'),
+                                isVerified
+                                    ? const Color(0xFF059669)
+                                    : (isPending
+                                        ? const Color(0xFFEA8A00)
+                                        : const Color(0xFFDC2626)),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -482,28 +501,59 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                               .toString()
                               .isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          padding: const EdgeInsets.fromLTRB(18, 4, 18, 12),
                           child: Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFEF2F2),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                  color: const Color(0xFFFECACA), width: 1),
+                                  color: const Color(0xFFFECACA),
+                                  width: 1.5),
                             ),
                             child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.info_outline_rounded,
-                                    color: Color(0xFFDC2626), size: 16),
-                                const SizedBox(width: 8),
+                                Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDC2626)
+                                        .withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                      Icons.error_outline_rounded,
+                                      color: Color(0xFFDC2626),
+                                      size: 18),
+                                ),
+                                const SizedBox(width: 12),
                                 Expanded(
-                                  child: Text(
-                                    'কারণ: ${widget.payment['rejectedReason']}',
-                                    style: GoogleFonts.hindSiliguri(
-                                        fontSize: 12,
-                                        color: const Color(0xFF991B1B),
-                                        height: 1.5),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'REJECTION REASON',
+                                        style: GoogleFonts.poppins(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFF991B1B),
+                                            letterSpacing: 1.2,
+                                            height: 1.4),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        widget.payment['rejectedReason']
+                                            .toString(),
+                                        style: GoogleFonts.hindSiliguri(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF7F1D1D),
+                                            height: 1.5),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -659,6 +709,36 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _stampOverlay(String text, Color color) {
+    return Transform.rotate(
+      angle: -0.18,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          border: Border.all(color: color, width: 3),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            border: Border.all(color: color.withOpacity(0.55), width: 1),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            text,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: color,
+              letterSpacing: 2.5,
+              height: 1.1,
+            ),
+          ),
+        ),
       ),
     );
   }
