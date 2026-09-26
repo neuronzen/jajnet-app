@@ -248,9 +248,9 @@ jobs:
 
       - name: Place google-services.json
         run: cp google-services.json android/app/google-services.json
-
-        - name: Build APK
-  run: flutter build apk --release
+        
+      - name: Build APK
+        run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
