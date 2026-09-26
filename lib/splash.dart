@@ -253,28 +253,28 @@ class _SplashScreenNewState extends State<SplashScreenNew>
   List<Widget> _particles(Size size) {
     final r = math.Random(13);
     final data = List.generate(24, (i) {
-      return {
-        'x': r.nextDouble() * 2 - 1,
-        'y': r.nextDouble() * 2 - 1,
-        'delay': r.nextDouble() * 0.4,
-        'speed': 0.6 + r.nextDouble() * 0.6,
-        'size': 2.0 + r.nextDouble() * 2.0,
-      };
+      return _Particle(
+        x: r.nextDouble() * 2 - 1,
+        y: r.nextDouble() * 2 - 1,
+        delay: r.nextDouble() * 0.4,
+        speed: 0.6 + r.nextDouble() * 0.6,
+        size: 2.0 + r.nextDouble() * 2.0,
+      );
     });
 
     return data.map((d) {
       return AnimatedBuilder(
         animation: Listenable.merge([_master, _wave]),
         builder: (_, __) {
-          final appear = _stage(0.15 + d['delay'], 0.5);
+          final appear = _stage(0.15 + d.delay, 0.5);
           final fade = 1.0 - _stage(0.55, 0.7);
           final base = (appear * fade).clamp(0.0, 1.0);
           if (base <= 0.01) return const SizedBox.shrink();
 
           final w = _wave.value;
-          final t = (w * d['speed'] + d['delay']) % 1.0;
-          final x = d['x'] * 100;
-          final y = d['y'] * 100 - t * 80;
+          final t = (w * d.speed + d.delay) % 1.0;
+          final x = d.x * 100;
+          final y = d.y * 100 - t * 80;
           final opacity = base * (1 - t) * 0.9;
 
           return Transform.translate(
@@ -282,8 +282,8 @@ class _SplashScreenNewState extends State<SplashScreenNew>
             child: Opacity(
               opacity: opacity.clamp(0.0, 1.0),
               child: Container(
-                width: d['size'],
-                height: d['size'],
+                width: d.size,
+                height: d.size,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -547,4 +547,20 @@ class _RingsPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RingsPainter old) =>
       old.rotation != rotation;
+}
+
+
+class _Particle {
+  final double x;
+  final double y;
+  final double delay;
+  final double speed;
+  final double size;
+  const _Particle({
+    required this.x,
+    required this.y,
+    required this.delay,
+    required this.speed,
+    required this.size,
+  });
 }
