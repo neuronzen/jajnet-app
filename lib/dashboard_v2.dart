@@ -54,6 +54,7 @@ class _DashboardHomeState extends State<DashboardHome> {
             .get(),
         FirebaseFirestore.instance
             .collection('notices')
+            .orderBy('createdAt', descending: true)
             .limit(5)
             .get(),
         FirebaseFirestore.instance
@@ -153,12 +154,6 @@ class _DashboardHomeState extends State<DashboardHome> {
         _sectionTitle('দ্রুত কাজ'),
         const SizedBox(height: 12),
         _quickActions(context),
-        if (_payments.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          _sectionTitle('সাম্প্রতিক পেমেন্ট'),
-          const SizedBox(height: 12),
-          _paymentsCard(context),
-        ],
         if (_notices.isNotEmpty) ...[
           const SizedBox(height: 24),
           _sectionTitle('নোটিশ বোর্ড'),
@@ -232,181 +227,256 @@ child: Column(
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: JC.heroGradient,
+        gradient: isPaid
+            ? const LinearGradient(
+                colors: [Color(0xFF059669), Color(0xFF10B981)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : JC.heroGradient,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-BoxShadow(
-  color: JC.primary.withOpacity(0.35),
-  blurRadius: 26,
-  offset: const Offset(0, 12),
-),
+          BoxShadow(
+            color: (isPaid ? const Color(0xFF10B981) : JC.primary)
+                .withOpacity(0.32),
+            blurRadius: 26,
+            offset: const Offset(0, 12),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-// Connection + Package row
-Row(
-  children: [
-    _statusChip(status),
-    const Spacer(),
-    Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.22),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.speed_rounded,
-              color: Colors.white, size: 13),
-          const SizedBox(width: 5),
-          Text(
-            pkg,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              height: 1.5,
+          Row(
+            children: [
+              _statusChip(status),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.22),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.speed_rounded,
+                        color: Colors.white, size: 13),
+                    const SizedBox(width: 5),
+                    Text(
+                      pkg,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          if (isPaid) ...[
+            Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.22),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_rounded,
+                      color: Colors.white, size: 26),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('সব পরিশোধিত!',
+                          style: GoogleFonts.hindSiliguri(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              height: 1.4)),
+                      const SizedBox(height: 2),
+                      Text('আপনার কোনো বকেয়া নেই',
+                          style: GoogleFonts.hindSiliguri(
+                              fontSize: 12.5,
+                              color: Colors.white.withOpacity(0.92),
+                              height: 1.5)),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-    ),
-  ],
-),
-const SizedBox(height: 18),
-Text('মোট বকেয়া',
-    style: GoogleFonts.hindSiliguri(
-        color: Colors.white.withOpacity(0.85),
-        fontSize: 13,
-        height: 1.5)),
-const SizedBox(height: 4),
-Text(
-  '৳ ${NumberFormat('#,##0').format(due)}',
-  style: GoogleFonts.poppins(
-      fontSize: 40,
-      fontWeight: FontWeight.w700,
-      color: Colors.white,
-      height: 1.3),
-),
-if ((_user?['monthlyDiscount'] ?? 0) is num && (_user?['monthlyDiscount'] ?? 0) > 0)
-  Padding(
-    padding: const EdgeInsets.only(top: 4),
-    child: Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.22),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            '🎁 ৳${_user?['monthlyDiscount']} ছাড়',
-            style: GoogleFonts.hindSiliguri(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-                height: 1.4),
-          ),
-        ),
-      ],
-    ),
-  ),
-if (!isPaid && _currentMonthCharge > 0)
-  Padding(
-    padding: const EdgeInsets.only(top: 4),
-    child: Text(
-      'এই মাস ৳$_currentMonthCharge' +
-          (due > _currentMonthCharge
-              ? '  •  আগের ৳${NumberFormat('#,##0').format(due - _currentMonthCharge)}'
-              : ''),
-      style: GoogleFonts.hindSiliguri(
-          fontSize: 12.5,
-          color: Colors.white.withOpacity(0.95),
-          fontWeight: FontWeight.w500,
-          height: 1.5),
-    ),
-  ),
-
-const SizedBox(height: 16),
-Container(
-  padding: const EdgeInsets.all(12),
-  decoration: BoxDecoration(
-    color: Colors.white.withOpacity(0.18),
-    borderRadius: BorderRadius.circular(12),
-  ),
-  child: Row(
-    children: [
-      Icon(
-        dueSoon
-            ? Icons.warning_amber_rounded
-            : Icons.calendar_month_rounded,
-        color: Colors.white,
-        size: 18,
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('পরবর্তী বিল',
+          ] else ...[
+            Text('মোট বকেয়া',
                 style: GoogleFonts.hindSiliguri(
-                    fontSize: 11,
                     color: Colors.white.withOpacity(0.85),
+                    fontSize: 13,
                     height: 1.5)),
+            const SizedBox(height: 4),
             Text(
-              _nextBillingLabel,
-              style: GoogleFonts.hindSiliguri(
-                  fontSize: 14,
+              '৳ ${NumberFormat('#,##0').format(due)}',
+              style: GoogleFonts.poppins(
+                  fontSize: 40,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
-                  height: 1.5),
+                  height: 1.3),
             ),
+            if ((_user?['monthlyDiscount'] ?? 0) is num &&
+                (_user?['monthlyDiscount'] ?? 0) > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.22),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '🎁 ৳${_user?['monthlyDiscount']} ছাড়',
+                        style: GoogleFonts.hindSiliguri(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (_currentMonthCharge > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'এই মাস ৳$_currentMonthCharge' +
+                      (due > _currentMonthCharge
+                          ? '  •  আগের ৳${NumberFormat('#,##0').format(due - _currentMonthCharge)}'
+                          : ''),
+                  style: GoogleFonts.hindSiliguri(
+                      fontSize: 12.5,
+                      color: Colors.white.withOpacity(0.95),
+                      fontWeight: FontWeight.w500,
+                      height: 1.5),
+                ),
+              ),
           ],
-        ),
-      ),
-      if (!isPaid)
-        Text(
-          '$days দিন',
-          style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              height: 1.5),
-        ),
-    ],
-  ),
-),
-const SizedBox(height: 16),
-GestureDetector(
-  onTap: () => Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (_) => const PaymentScreen())),
-  child: Container(
-    height: 50,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text('এখনই পরিশোধ করুন',
-            style: GoogleFonts.hindSiliguri(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: JC.primary,
-                height: 1.5)),
-        const SizedBox(width: 6),
-        const Icon(Icons.arrow_forward_rounded,
-            color: JC.primary, size: 18),
-      ],
-    ),
-  ),
-),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isPaid
+                      ? Icons.event_available_rounded
+                      : (dueSoon
+                          ? Icons.warning_amber_rounded
+                          : Icons.calendar_month_rounded),
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('পরবর্তী বিল',
+                          style: GoogleFonts.hindSiliguri(
+                              fontSize: 11,
+                              color: Colors.white.withOpacity(0.85),
+                              height: 1.5)),
+                      Text(
+                        _nextBillingLabel,
+                        style: GoogleFonts.hindSiliguri(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            height: 1.5),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!isPaid)
+                  Text(
+                    '$days দিন',
+                    style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        height: 1.5),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (isPaid)
+            GestureDetector(
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ChargesScreen())),
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('বিল রেকর্ড দেখুন',
+                        style: GoogleFonts.hindSiliguri(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF059669),
+                            height: 1.5)),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.arrow_forward_rounded,
+                        color: Color(0xFF059669), size: 18),
+                  ],
+                ),
+              ),
+            )
+          else
+            GestureDetector(
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const PaymentScreen())),
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('এখনই পরিশোধ করুন',
+                        style: GoogleFonts.hindSiliguri(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: JC.primary,
+                            height: 1.5)),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.arrow_forward_rounded,
+                        color: JC.primary, size: 18),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -459,8 +529,7 @@ height: 1.5));
 page: const PaymentScreen()),
       _QA('প্যাকেজ', Icons.wifi_rounded,
 page: const PackagesScreen()),
-      _QA('বিল রেকর্ড', Icons.receipt_long_rounded,
-          page: const ChargesScreen()),
+      _QA('হেল্পলাইন', Icons.call_rounded, onTap: _callHelpline),
       _QA('স্পিড টেস্ট', Icons.speed_rounded,
 onTap: () => _showSpeedTest(context)),
     ];
@@ -510,6 +579,17 @@ onTap: () => _showSpeedTest(context)),
     ))
 .toList(),
     );
+  }
+
+  Future<void> _callHelpline() async {
+    final uri = Uri.parse('tel:${AppInfo.helpline}');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      debugPrint('call error: $e');
+    }
   }
 
   void _showSpeedTest(BuildContext context) {

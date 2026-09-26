@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'screens.dart';
@@ -25,6 +27,13 @@ class _LoginScreenNewState extends State<LoginScreenNew>
 
   late final AnimationController _entrance;
   late final AnimationController _aurora;
+  late final AnimationController _wave;
+
+  StreamSubscription? _accelSub;
+  double _targetX = 0;
+  double _targetY = 0;
+  double _smoothX = 0;
+  double _smoothY = 0;
 
   @override
   void initState() {
@@ -37,12 +46,44 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       vsync: this,
       duration: const Duration(seconds: 12),
     )..repeat(reverse: true);
+    _wave = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat();
+
+    _wave.addListener(() {
+      // Low-pass filter for smooth tilt response
+      _smoothX += (_targetX - _smoothX) * 0.08;
+      _smoothY += (_targetY - _smoothY) * 0.08;
+    });
+
+    _startSensors();
+  }
+
+  void _startSensors() {
+    try {
+      _accelSub = userAccelerometerEventStream().listen(
+        (event) {
+          // event gives acceleration minus gravity, roughly -10..10 m/s²
+          final nx = (event.x / 9.8).clamp(-1.0, 1.0);
+          final ny = (event.y / 9.8).clamp(-1.0, 1.0);
+          _targetX = nx;
+          _targetY = ny;
+        },
+        onError: (_) {},
+        cancelOnError: false,
+      );
+    } catch (_) {
+      // Sensors not available — tilt stays at 0, waves still animate
+    }
   }
 
   @override
   void dispose() {
+    _accelSub?.cancel();
     _entrance.dispose();
     _aurora.dispose();
+    _wave.dispose();
     _email.dispose();
     _pass.dispose();
     super.dispose();
@@ -137,7 +178,6 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       backgroundColor: const Color(0xFFFBFBFC),
       body: Stack(
         children: [
-          // ===== HEADER =====
           Positioned(
             top: 0, left: 0, right: 0,
             height: headerH + 40,
@@ -162,6 +202,8 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                     Positioned.fill(child: _auroraLayer()),
                     // Diagonal gold lines
                     Positioned.fill(child: _diagonalGoldLines()),
+                    // Water waves layer
+                    Positioned.fill(child: _waterLayer()),
                     // Top right corner accent
                     Positioned(
                       top: -80, right: -60,
@@ -185,7 +227,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _fade(_logoCard(), 0.0),
+                              _fade(_floatingLogo(), 0.0),
                               const SizedBox(height: 20),
                               _fade(_brandBlock(), 0.15),
                             ],
@@ -199,7 +241,6 @@ class _LoginScreenNewState extends State<LoginScreenNew>
             ),
           ),
 
-          // ===== BODY =====
           Positioned(
             top: headerH,
             left: 0, right: 0, bottom: 0,
@@ -286,20 +327,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                     _fade(_loginButton(), 0.56),
                     const SizedBox(height: 20),
                     _fade(_credentialsCard(), 0.66),
-                    const SizedBox(height: 24),
-                    _fade(
-                      Center(
-                        child: Text(
-                          'সংস্করণ ১.০.০',
-                          style: GoogleFonts.hindSiliguri(
-                            fontSize: 10.5,
-                            color: const Color(0xFFB0B7C3),
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                      0.76,
-                    ),
+                    const SizedBox(height: 28),
                   ],
                 ),
               ),
@@ -307,6 +335,107 @@ class _LoginScreenNewState extends State<LoginScreenNew>
           ),
         ],
       ),
+    );
+  }
+
+  // ============ WATER LAYER ============
+  Widget _waterLayer() {
+    return AnimatedBuilder(
+      animation: _wave,
+      builder: (_, __) {
+        return CustomPaint(
+          painter: _WaterPainter(
+            time: _wave.value,
+            tiltX: _smoothX,
+            tiltY: _smoothY,
+          ),
+        );
+      },
+    );
+  }
+
+  // ============ FLOATING LOGO with tilt + glow ============
+  Widget _floatingLogo() {
+    return AnimatedBuilder(
+      animation: _wave,
+      builder: (_, __) {
+        final t = _wave.value * math.pi * 2;
+        final bob = math.sin(t) * 4.5;
+        final tiltDx = _smoothX * 14;
+        final tiltDy = _smoothY * 7;
+        final rot = _smoothX * 0.06;
+
+        return Transform.translate(
+          offset: Offset(tiltDx, bob + tiltDy),
+          child: Transform.rotate(
+            angle: rot,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Soft glow
+                Container(
+                  width: 165,
+                  height: 165,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.38),
+                        Colors.white.withOpacity(0.0),
+                      ],
+                    ),
+                  ),
+                ),
+                // Logo card
+                Container(
+                  width: 108,
+                  height: 108,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.15),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.22),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 84,
+                      height: 84,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withOpacity(0.28),
+                            blurRadius: 22,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Image.asset(
+                            'assets/logo/jajnet-logo.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.wifi_rounded,
+                              size: 40,
+                              color: JC.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -376,54 +505,6 @@ class _LoginScreenNewState extends State<LoginScreenNew>
           }),
         );
       },
-    );
-  }
-
-  // ===== LOGO =====
-  Widget _logoCard() {
-    return Container(
-      width: 108,
-      height: 108,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withOpacity(0.15),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.22),
-          width: 1.2,
-        ),
-      ),
-      child: Center(
-        child: Container(
-          width: 84,
-          height: 84,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withOpacity(0.28),
-                blurRadius: 22,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: Padding(
-              padding: const EdgeInsets.all(6),
-              child: Image.asset(
-                'assets/logo/jajnet-logo.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.wifi_rounded,
-                  size: 40,
-                  color: JC.primary,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -646,15 +727,15 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: const Icon(
-                      Icons.vpn_key_rounded,
+                      Icons.headset_mic_rounded,
                       color: JC.primary,
-                      size: 15,
+                      size: 16,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'লগইন তথ্য পাননি?',
+                      'সাপোর্ট দরকার?',
                       style: GoogleFonts.hindSiliguri(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -762,6 +843,58 @@ class _HeaderClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+// ===== WATER PAINTER =====
+class _WaterPainter extends CustomPainter {
+  final double time;
+  final double tiltX;
+  final double tiltY;
+
+  _WaterPainter({
+    required this.time,
+    required this.tiltX,
+    required this.tiltY,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (int layer = 0; layer < 3; layer++) {
+      final phaseShift = layer * 0.7;
+      final speed = 0.8 + layer * 0.22;
+      final amp = 5.0 + layer * 3.5;
+      final baseY = size.height * 0.52 + layer * 20 + tiltY * 10;
+      final opacity = 0.10 + layer * 0.04;
+
+      final paint = Paint()
+        ..color = Colors.white.withOpacity(opacity)
+        ..style = PaintingStyle.fill;
+
+      final path = Path();
+      path.moveTo(0, baseY);
+
+      final phase = time * speed * 2 * math.pi + phaseShift;
+      final horizShift = tiltX * 45;
+
+      for (double x = 0; x <= size.width; x += 5) {
+        final normX = (x + horizShift) / size.width;
+        final y = baseY +
+            math.sin(normX * 2 * math.pi * 1.4 + phase) * amp +
+            math.sin(normX * 2 * math.pi * 0.7 + phase * 0.7) * amp * 0.4;
+        path.lineTo(x, y);
+      }
+
+      path.lineTo(size.width, size.height);
+      path.lineTo(0, size.height);
+      path.close();
+
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WaterPainter old) =>
+      old.time != time || old.tiltX != tiltX || old.tiltY != tiltY;
 }
 
 // ===== SIGNUP (unchanged) =====

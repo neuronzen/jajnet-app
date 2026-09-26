@@ -5,6 +5,9 @@ import 'splash.dart';
 import 'theme.dart';
 import 'notification_service.dart';
 
+final GlobalKey<NavigatorState> jajNavigatorKey =
+    GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -19,6 +22,7 @@ class JajNetApp extends StatelessWidget {
     return MaterialApp(
       title: 'JAJ Net',
       debugShowCheckedModeBanner: false,
+      navigatorKey: jajNavigatorKey,
       theme: buildJajTheme(),
       home: const SplashScreenNew(),
     );

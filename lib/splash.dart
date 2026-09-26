@@ -112,10 +112,6 @@ class _SplashScreenNewState extends State<SplashScreenNew>
         ),
         child: Stack(
           children: [
-            // Subtle grid pattern
-            Positioned.fill(
-              child: CustomPaint(painter: _GridPainter()),
-            ),
             // Rotating transparent rings (background)
             Positioned.fill(child: _backgroundRings()),
             // Main content
@@ -489,25 +485,6 @@ class _SplashScreenNewState extends State<SplashScreenNew>
 }
 
 // ============ Custom Painters ============
-
-class _GridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
-      ..strokeWidth = 1;
-    const step = 40.0;
-    for (double x = 0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = 0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
 
 class _RingsPainter extends CustomPainter {
   final double rotation;

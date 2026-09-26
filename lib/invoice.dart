@@ -68,18 +68,55 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final invoiceDate = (widget.payment['createdAt'] as Timestamp?)?.toDate() ??
-        DateTime.now();
-    final paymentDate = (widget.payment['verifiedAt'] as Timestamp?)?.toDate() ??
-        invoiceDate;
+    final invoiceDate =
+        (widget.payment['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
     final paid = (widget.payment['amount'] ?? 0) as int;
     final previousDue = (widget.payment['dueBefore'] ?? 0) as int;
-    final monthlyDiscount = ((widget.user['monthlyDiscount'] ?? 0) as num).toInt();
+    final monthlyDiscount =
+        ((widget.user['monthlyDiscount'] ?? 0) as num).toInt();
+
+    final status =
+        (widget.payment['status'] ?? 'pending').toString().toLowerCase();
+    final isVerified = status == 'verified';
+    final isPending = status == 'pending';
+    final isRejected = status == 'rejected';
+
     final grossAmount = widget.monthlyPrice * widget.months;
     final subtotal = previousDue + grossAmount - monthlyDiscount;
-    final total = subtotal - paid;
-    final remaining = total < 0 ? 0 : total;
-    final isPaid = remaining == 0;
+
+    // Only verified payments count toward "paid"
+    final appliedPaid = isVerified ? paid : 0;
+    final totalDue = (subtotal - appliedPaid).clamp(0, 999999999);
+
+    // Header/banner config
+    final Color bannerA;
+    final Color bannerB;
+    final String bannerLabel;
+    final String bannerAmount;
+    final IconData bannerIcon;
+
+    if (isVerified) {
+      bannerA = const Color(0xFF059669);
+      bannerB = const Color(0xFF10B981);
+      bannerLabel = totalDue == 0 ? 'TOTAL PAID' : 'PAID — DUE REMAINING';
+      bannerAmount = '৳${totalDue == 0 ? paid : totalDue}';
+      bannerIcon = totalDue == 0
+          ? Icons.check_rounded
+          : Icons.warning_amber_rounded;
+    } else if (isPending) {
+      bannerA = const Color(0xFFEA8A00);
+      bannerB = const Color(0xFFFFA000);
+      bannerLabel = 'AWAITING VERIFICATION';
+      bannerAmount = '৳$paid';
+      bannerIcon = Icons.schedule_rounded;
+    } else {
+      // rejected
+      bannerA = const Color(0xFFDC2626);
+      bannerB = const Color(0xFFEF4444);
+      bannerLabel = 'REJECTED — NOT PAID';
+      bannerAmount = '৳$subtotal';
+      bannerIcon = Icons.cancel_rounded;
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
@@ -117,7 +154,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ============ HEADER ============
+                      // HEADER
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -223,13 +260,12 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                         ),
                       ),
 
-                      // ============ BILL TO / INVOICE INFO ============
+                      // BILL TO / INVOICE INFO
                       Padding(
                         padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Bill To
                             Expanded(
                               flex: 6,
                               child: Column(
@@ -285,7 +321,6 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                 ],
                               ),
                             ),
-                            // Invoice Info
                             Expanded(
                               flex: 5,
                               child: Column(
@@ -309,7 +344,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                           height: 1,
                           color: const Color(0xFFF0F0F0)),
 
-                      // ============ ITEMS TABLE ============
+                      // ITEMS
                       Padding(
                         padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
                         child: Column(
@@ -351,7 +386,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                           height: 1,
                           color: const Color(0xFFF0F0F0)),
 
-                      // ============ TOTALS ============
+                      // TOTALS
                       Padding(
                         padding: const EdgeInsets.fromLTRB(18, 12, 18, 6),
                         child: Column(
@@ -362,14 +397,21 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                             if (previousDue > 0)
                               _totalLine('Previous Due', '৳$previousDue'),
                             _totalLine('Total', '৳$subtotal'),
-                            _totalLine('Paid', '৳$paid'),
+                            if (isVerified)
+                              _totalLine('Paid', '৳$paid')
+                            else if (isPending)
+                              _totalLine('Claimed', '৳$paid (pending)')
+                            else
+                              _totalLine('Paid', '৳0'),
+                            if (isVerified && totalDue > 0)
+                              _totalLine('Remaining', '৳$totalDue'),
                           ],
                         ),
                       ),
 
                       const SizedBox(height: 8),
 
-                      // ============ TOTAL BOX (FOCAL POINT) ============
+                      // BANNER
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 18),
                         child: Container(
@@ -378,25 +420,14 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                               horizontal: 18, vertical: 14),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: isPaid
-                                  ? [
-                                      const Color(0xFF059669),
-                                      const Color(0xFF10B981),
-                                    ]
-                                  : [
-                                      const Color(0xFFDC2626),
-                                      const Color(0xFFEF4444),
-                                    ],
+                              colors: [bannerA, bannerB],
                               begin: Alignment.centerLeft,
                               end: Alignment.centerRight,
                             ),
                             borderRadius: BorderRadius.circular(14),
                             boxShadow: [
                               BoxShadow(
-                                color: (isPaid
-                                        ? const Color(0xFF10B981)
-                                        : const Color(0xFFEF4444))
-                                    .withOpacity(0.3),
+                                color: bannerB.withOpacity(0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -408,7 +439,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    isPaid ? 'TOTAL PAID' : 'TOTAL DUE',
+                                    bannerLabel,
                                     style: GoogleFonts.poppins(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
@@ -418,7 +449,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '৳${isPaid ? paid : remaining}',
+                                    bannerAmount,
                                     style: GoogleFonts.poppins(
                                         fontSize: 28,
                                         fontWeight: FontWeight.w800,
@@ -435,13 +466,8 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                   color: Colors.white.withOpacity(0.22),
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(
-                                  isPaid
-                                      ? Icons.check_rounded
-                                      : Icons.warning_amber_rounded,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
+                                child: Icon(bannerIcon,
+                                    color: Colors.white, size: 24),
                               ),
                             ],
                           ),
@@ -450,14 +476,50 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
 
                       const SizedBox(height: 12),
 
-                      // ============ PAYMENT STATUS ============
+                      // Rejected reason
+                      if (isRejected &&
+                          (widget.payment['rejectedReason'] ?? '')
+                              .toString()
+                              .isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                  color: const Color(0xFFFECACA), width: 1),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.info_outline_rounded,
+                                    color: Color(0xFFDC2626), size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'কারণ: ${widget.payment['rejectedReason']}',
+                                    style: GoogleFonts.hindSiliguri(
+                                        fontSize: 12,
+                                        color: const Color(0xFF991B1B),
+                                        height: 1.5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (isRejected) const SizedBox(height: 12),
+
+                      // PAYMENT DETAIL
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 18),
                         child: Row(
                           children: [
                             Expanded(
                               child: _paymentDetail(
-                                'Payment Method',
+                                'Method',
                                 (widget.payment['method'] ?? 'bKash')
                                     .toString(),
                               ),
@@ -473,9 +535,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                             Expanded(
                               child: _paymentDetail(
                                 'Status',
-                                (widget.payment['status'] ?? 'pending')
-                                    .toString()
-                                    .toUpperCase(),
+                                status.toUpperCase(),
                               ),
                             ),
                           ],
@@ -484,7 +544,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
 
                       const SizedBox(height: 14),
 
-                      // ============ FOOTER ============
+                      // FOOTER
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
@@ -531,7 +591,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             ),
           ),
 
-          // ============ ACTION BUTTONS ============
+          // ACTION BUTTONS
           Container(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
             decoration: BoxDecoration(
@@ -728,7 +788,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              success ? 'গ্যালারিতে সেভ হয়েছে (Pictures folder)' : 'সেভ করা যায়নি',
+              success ? 'গ্যালারিতে সেভ হয়েছে' : 'সেভ করা যায়নি',
               style: GoogleFonts.hindSiliguri(height: 1.5)),
           backgroundColor: success ? JC.success : JC.error,
           behavior: SnackBarBehavior.floating,
