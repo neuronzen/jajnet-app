@@ -966,7 +966,7 @@ class _LiquidPainter extends CustomPainter {
     for (int i = 0; i < 14; i++) {
       final fx = (i / 14) * size.width + math.sin(phase + i * 0.9) * 20;
       final fy =
-          surfaceY(fx) - 2 - math.abs(math.sin(phase * 2 + i)) * 2.5;
+          surfaceY(fx) - 2 - (math.sin(phase * 2 + i)).abs() * 2.5;
       canvas.drawCircle(Offset(fx, fy), 1.3, foamPaint);
     }
   }
