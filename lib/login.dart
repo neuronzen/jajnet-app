@@ -89,7 +89,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
     // Target surface angle from gravity vector.
     // Real water surface is perpendicular to gravity.
     final safeGy = _gy.abs() < 0.5 ? (_gy >= 0 ? 0.5 : -0.5) : _gy;
-    final targetAngle = math.atan2(-_gx, safeGy);
+    final targetAngle = math.atan2(_gx, safeGy);
 
     // Spring-damper — inertia, overshoot, oscillation
     const kSpring = 30.0;
@@ -894,7 +894,7 @@ class _HeaderClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-// ===== LIQUID PAINTER — real water =====
+// ===== LIQUID PAINTER — clean blue water =====
 class _LiquidPainter extends CustomPainter {
   final double surfaceAngle;
   final double waveEnergy;
@@ -908,26 +908,26 @@ class _LiquidPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final baseY = size.height * 0.80;
-    final slope = math.tan(surfaceAngle.clamp(-1.2, 1.2));
+    final baseY = size.height * 0.62;
+    final slope = math.tan(surfaceAngle.clamp(-1.1, 1.1));
     final centerX = size.width / 2;
     final amp = waveEnergy.clamp(0.0, 1.5);
 
     double surfaceY(double x) {
       final dx = x - centerX;
       final line = baseY + dx * slope;
-      final w1 = math.sin(x * 0.007 + wavePhase * 1.1) * 11.0 * amp;
-      final w2 = math.sin(x * 0.018 - wavePhase * 1.7) * 5.5 * amp;
-      final w3 = math.sin(x * 0.040 + wavePhase * 0.9) * 2.6 * amp;
-      final w4 = math.sin(x * 0.085 - wavePhase * 2.3) * 1.2 * amp;
+      final w1 = math.sin(x * 0.006 + wavePhase * 1.05) * 9.0 * amp;
+      final w2 = math.sin(x * 0.017 - wavePhase * 1.4) * 4.5 * amp;
+      final w3 = math.sin(x * 0.039 + wavePhase * 0.85) * 2.0 * amp;
+      final w4 = math.sin(x * 0.082 - wavePhase * 2.0) * 0.9 * amp;
       final edgeDist = math.min(x, size.width - x);
-      final meniscus = edgeDist < 45
-          ? -math.pow((45 - edgeDist) / 45, 2).toDouble() * 12
+      final meniscus = edgeDist < 40
+          ? -math.pow((40 - edgeDist) / 40, 2).toDouble() * 10
           : 0.0;
       return line + w1 + w2 + w3 + w4 + meniscus;
     }
 
-    // WATER BODY
+    // WATER BODY — solid blue, no muddiness
     final waterPath = Path();
     waterPath.moveTo(0, surfaceY(0));
     for (double x = 0; x <= size.width; x += 3) {
@@ -940,87 +940,72 @@ class _LiquidPainter extends CustomPainter {
     final shader = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [
-        const Color(0xFFA8D4E6).withOpacity(0.60),
-        const Color(0xFF6BA3BE).withOpacity(0.55),
-        const Color(0xFF3D6F87).withOpacity(0.72),
+      colors: const [
+        Color(0xFF7DD3FC),
+        Color(0xFF0EA5E9),
+        Color(0xFF075985),
       ],
-      stops: const [0.0, 0.40, 1.0],
-    ).createShader(Rect.fromLTWH(0, baseY - 60, size.width, size.height));
+      stops: const [0.0, 0.35, 1.0],
+    ).createShader(Rect.fromLTWH(0, baseY - 20, size.width, size.height));
+
     canvas.drawPath(waterPath, Paint()..shader = shader);
 
-    // DEEP GLOW
-    final deep = Path();
-    deep.moveTo(0, surfaceY(0) + 10);
-    for (double x = 0; x <= size.width; x += 3) {
-      deep.lineTo(x, surfaceY(x) + 10);
-    }
-    deep.lineTo(size.width, size.height);
-    deep.lineTo(0, size.height);
-    deep.close();
-    canvas.drawPath(deep, Paint()
-      ..color = const Color(0xFF7ED3F0).withOpacity(0.22)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14));
-
-    // CAUSTICS
-    final causticIntensity = 0.10 + amp * 0.14;
-    for (int i = 0; i < 7; i++) {
-      final bx = (i / 6) * size.width +
-          math.sin(wavePhase * 0.5 + i * 1.7) * 60;
-      final by = baseY + 30 + i * 20 +
-          math.cos(wavePhase * 0.35 + i) * 14;
-      final r = 30.0 + (i % 4) * 22;
-      canvas.drawCircle(Offset(bx, by), r, Paint()
-        ..shader = RadialGradient(colors: [
-          Colors.white.withOpacity(causticIntensity),
-          Colors.white.withOpacity(0.0),
-        ]).createShader(Rect.fromCircle(center: Offset(bx, by), radius: r)));
-    }
-
-    // BUBBLES
-    for (int i = 0; i < 6; i++) {
-      final bx = ((i * 97 + 37) % size.width.toInt()).toDouble();
-      final cycle = (wavePhase * 0.15 + i * 0.17) % 1.0;
-      final by = baseY + 40 + (1 - cycle) * (size.height - baseY - 40);
-      final br = 1.5 + (i % 3) * 0.8;
-      final bo = 0.14 + (1 - cycle) * 0.22;
-      canvas.drawCircle(Offset(bx, by), br, Paint()
-        ..color = Colors.white.withOpacity(bo)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.8);
-    }
-
-    // SURFACE
+    // SURFACE LINE — layered glow
     final sPath = Path();
     for (double x = 0; x <= size.width; x += 3) {
       final y = surfaceY(x);
-      if (x == 0) { sPath.moveTo(x, y); } else { sPath.lineTo(x, y); }
+      if (x == 0) {
+        sPath.moveTo(x, y);
+      } else {
+        sPath.lineTo(x, y);
+      }
     }
-    canvas.drawPath(sPath, Paint()
-      ..color = const Color(0xFFB8E4F5).withOpacity(0.42)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 20
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12));
-    canvas.drawPath(sPath, Paint()
-      ..color = Colors.white.withOpacity(0.60)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
-    canvas.drawPath(sPath, Paint()
-      ..color = Colors.white.withOpacity(0.85)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.1);
 
-    // SPECULAR
+    // Outer cyan glow
+    canvas.drawPath(
+      sPath,
+      Paint()
+        ..color = const Color(0xFFBAE6FD).withOpacity(0.55)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 16
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+    );
+
+    // White glow
+    canvas.drawPath(
+      sPath,
+      Paint()
+        ..color = Colors.white.withOpacity(0.7)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+
+    // Crisp top edge
+    canvas.drawPath(
+      sPath,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    // SPECULAR HIGHLIGHTS on surface
     for (int i = 0; i < 3; i++) {
       final sx = size.width * (0.22 + i * 0.28) +
-          math.sin(wavePhase * 1.3 + i * 2) * 45;
+          math.sin(wavePhase * 1.3 + i * 2) * 40;
       final sy = surfaceY(sx) - 2;
-      canvas.drawCircle(Offset(sx, sy), 6.0, Paint()
-        ..shader = RadialGradient(colors: [
-          Colors.white.withOpacity(0.80),
-          Colors.white.withOpacity(0.0),
-        ]).createShader(Rect.fromCircle(center: Offset(sx, sy), radius: 6)));
+      canvas.drawCircle(
+        Offset(sx, sy),
+        7.0,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              Colors.white.withOpacity(0.9),
+              Colors.white.withOpacity(0.0),
+            ],
+          ).createShader(Rect.fromCircle(center: Offset(sx, sy), radius: 7)),
+      );
     }
   }
 
