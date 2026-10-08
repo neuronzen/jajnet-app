@@ -49,9 +49,6 @@ class AuthService {
 
   static Future<void> signOut() => _auth.signOut();
 
-  static Future<void> sendPasswordReset(String email) =>
-      _auth.sendPasswordResetEmail(email: email.trim());
-
   static Future<Map<String, dynamic>?> getUserData() async {
     final user = currentUser;
     if (user == null) return null;

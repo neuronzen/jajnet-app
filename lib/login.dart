@@ -170,23 +170,6 @@ class _LoginScreenNewState extends State<LoginScreenNew>
     }
   }
 
-  Future<void> _forgotPassword() async {
-    final email = _email.text.trim();
-    if (!email.contains('@')) {
-      _snack('উপরের ঘরে আপনার ইমেইল লিখে আবার চাপুন', isError: false);
-      return;
-    }
-    try {
-      await AuthService.sendPasswordReset(email);
-      if (!mounted) return;
-      _snack('পাসওয়ার্ড রিসেটের লিংক ইমেইলে পাঠানো হয়েছে (Spam ফোল্ডারও দেখুন)',
-          isError: false, durationSec: 6);
-    } catch (e) {
-      if (!mounted) return;
-      _snack(authErrorMessage(e));
-    }
-  }
-
   void _snack(String msg, {bool isError = true, int durationSec = 3}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -375,20 +358,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                       ),
                       0.48,
                     ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _loading ? null : _forgotPassword,
-                        child: Text(
-                          'পাসওয়ার্ড ভুলে গেছেন?',
-                          style: GoogleFonts.hindSiliguri(
-                            color: JC.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 24),
                     _fade(_loginButton(), 0.56),
                     const SizedBox(height: 20),
                     _fade(_credentialsCard(), 0.66),

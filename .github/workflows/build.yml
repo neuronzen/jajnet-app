@@ -257,18 +257,31 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          USE_RELEASE=false
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
-            {
-              echo "storePassword=$KEYSTORE_PASSWORD"
-              echo "keyPassword=$KEY_PASSWORD"
-              echo "keyAlias=$KEY_ALIAS"
-              echo "storeFile=upload-keystore.jks"
-            } > android/key.properties
-            echo "Release signing enabled"
+            # স্পেস/নতুন লাইন/CR থাকলেও চলবে
+            if printf '%s' "$KEYSTORE_BASE64" | tr -d ' \r\n\t' | base64 -d > android/app/upload-keystore.jks 2>/dev/null && [ -s android/app/upload-keystore.jks ]; then
+              if keytool -list -keystore android/app/upload-keystore.jks -storepass "$KEYSTORE_PASSWORD" > /dev/null 2>&1; then
+                {
+                  echo "storePassword=$KEYSTORE_PASSWORD"
+                  echo "keyPassword=$KEY_PASSWORD"
+                  echo "keyAlias=$KEY_ALIAS"
+                  echo "storeFile=upload-keystore.jks"
+                } > android/key.properties
+                USE_RELEASE=true
+              else
+                echo "::warning::Keystore খোলা যায়নি (KEYSTORE_PASSWORD ভুল?) — debug key দিয়ে build হচ্ছে"
+              fi
+            else
+              echo "::warning::KEYSTORE_BASE64 সঠিক base64 নয় — debug key দিয়ে build হচ্ছে"
+            fi
           else
             echo "No keystore secrets found - using debug signing"
           fi
+          if [ "$USE_RELEASE" != "true" ]; then
+            rm -f android/app/upload-keystore.jks android/key.properties
+          fi
+          echo "Release signing enabled: $USE_RELEASE"
 
       - name: Generate Padded App Icon
         run: |
