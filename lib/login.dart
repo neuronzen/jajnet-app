@@ -11,6 +11,8 @@ import 'screens.dart';
 import 'services.dart';
 import 'water_sim.dart';
 import 'theme.dart';
+import 'auth_errors.dart';
+import 'notification_service.dart';
 
 class LoginScreenNew extends StatefulWidget {
   const LoginScreenNew({super.key});
@@ -141,6 +143,7 @@ class _LoginScreenNewState extends State<LoginScreenNew>
         );
         return;
       }
+      NotificationService.saveTokenForCurrentUser();
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const MainShell()),
@@ -164,6 +167,23 @@ class _LoginScreenNewState extends State<LoginScreenNew>
       _snack(msg, isError: true);
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final email = _email.text.trim();
+    if (!email.contains('@')) {
+      _snack('উপরের ঘরে আপনার ইমেইল লিখে আবার চাপুন', isError: false);
+      return;
+    }
+    try {
+      await AuthService.sendPasswordReset(email);
+      if (!mounted) return;
+      _snack('পাসওয়ার্ড রিসেটের লিংক ইমেইলে পাঠানো হয়েছে (Spam ফোল্ডারও দেখুন)',
+          isError: false, durationSec: 6);
+    } catch (e) {
+      if (!mounted) return;
+      _snack(authErrorMessage(e));
     }
   }
 
@@ -355,7 +375,20 @@ class _LoginScreenNewState extends State<LoginScreenNew>
                       ),
                       0.48,
                     ),
-                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _loading ? null : _forgotPassword,
+                        child: Text(
+                          'পাসওয়ার্ড ভুলে গেছেন?',
+                          style: GoogleFonts.hindSiliguri(
+                            color: JC.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     _fade(_loginButton(), 0.56),
                     const SizedBox(height: 20),
                     _fade(_credentialsCard(), 0.66),
@@ -1043,17 +1076,37 @@ class _SignupScreenNewState extends State<SignupScreenNew> {
   bool _hide = true;
 
   Future<void> _signup() async {
-    if (_name.text.isEmpty || _email.text.isEmpty || _pass.text.isEmpty) return;
+    void warn(String m) => ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(m)));
+    final email = _email.text.trim();
+    final phone = _phone.text.replaceAll(RegExp(r'[\s-]'), '');
+    if (_name.text.trim().isEmpty || email.isEmpty || _pass.text.isEmpty) {
+      warn('নাম, ইমেইল ও পাসওয়ার্ড দিন');
+      return;
+    }
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      warn('ইমেইল সঠিক নয়');
+      return;
+    }
+    if (!RegExp(r'^(?:\+?88)?01[3-9]\d{8}$').hasMatch(phone)) {
+      warn('সঠিক মোবাইল নম্বর দিন (যেমন 017XXXXXXXX)');
+      return;
+    }
+    if (_pass.text.length < 6) {
+      warn('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের দিন');
+      return;
+    }
     setState(() => _loading = true);
     try {
       await AuthService.signUp(
         name: _name.text.trim(),
-        phone: _phone.text.trim(),
-        email: _email.text.trim(),
+        phone: phone,
+        email: email,
         password: _pass.text,
         address: _area,
       );
       if (!mounted) return;
+      NotificationService.saveTokenForCurrentUser();
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const MainShell()),
@@ -1061,7 +1114,9 @@ class _SignupScreenNewState extends State<SignupScreenNew> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('রেজিস্ট্রেশন ব্যর্থ: ${e.toString()}')),
+        SnackBar(
+            content: Text(authErrorMessage(e,
+                fallback: 'রেজিস্ট্রেশন ব্যর্থ হয়েছে, আবার চেষ্টা করুন'))),
       );
     } finally {
       if (mounted) setState(() => _loading = false);

@@ -32,3 +32,4 @@ Thumbs.db
 # ===== Secrets =====
 *.env
 .env.local
+*.b64.txt

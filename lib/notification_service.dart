@@ -41,6 +41,7 @@ class NotificationService {
 
       FirebaseMessaging.onMessage.listen((RemoteMessage m) {
         debugPrint('FG: ${m.notification?.title}');
+        _showForegroundBanner(m);
       });
 
       // === Deep-link handlers ===
@@ -103,6 +104,55 @@ class NotificationService {
     nav.push(MaterialPageRoute(
       builder: (_) => NoticeDetailScreen(title: title, body: body),
     ));
+  }
+
+  /// লগইন/সাইনআপের পর কল করুন — তখনই ইউজার চেনা যায়, তাই token এখন সেভ হবে।
+  static Future<void> saveTokenForCurrentUser() async {
+    try {
+      final t = await _fcm.getToken();
+      if (t != null) await _saveToken(t);
+    } catch (e) {
+      debugPrint('saveTokenForCurrentUser error: $e');
+    }
+  }
+
+  /// অ্যাপ খোলা থাকলে Android নিজে নোটিফিকেশন দেখায় না — তাই ভেতরে banner দেখাই।
+  static void _showForegroundBanner(RemoteMessage m) {
+    try {
+      final ctx = jajNavigatorKey.currentContext;
+      if (ctx == null) return;
+      final title = (m.notification?.title ?? m.data['title'] ?? '').toString();
+      final body = (m.notification?.body ?? m.data['body'] ?? '').toString();
+      if (title.isEmpty && body.isEmpty) return;
+      final messenger = ScaffoldMessenger.maybeOf(ctx);
+      if (messenger == null) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 6),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (title.isNotEmpty)
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+              if (body.isNotEmpty)
+                Text(body, maxLines: 2, overflow: TextOverflow.ellipsis),
+            ],
+          ),
+          action: SnackBarAction(
+            label: 'দেখুন',
+            onPressed: () {
+              _handleTap(m);
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('foreground banner error: $e');
+    }
   }
 
   static Future<void> _saveToken(String token) async {

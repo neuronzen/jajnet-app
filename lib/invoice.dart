@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'theme.dart';
+import 'num_utils.dart';
 
 class InvoicePreviewScreen extends StatefulWidget {
   final Map<String, dynamic> payment;
@@ -70,8 +71,8 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   Widget build(BuildContext context) {
     final invoiceDate =
         (widget.payment['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-    final paid = (widget.payment['amount'] ?? 0) as int;
-    final previousDue = (widget.payment['dueBefore'] ?? 0) as int;
+    final paid = asInt(widget.payment['amount']);
+    final previousDue = asInt(widget.payment['dueBefore']);
     final monthlyDiscount =
         ((widget.user['monthlyDiscount'] ?? 0) as num).toInt();
 

@@ -113,10 +113,10 @@ children: [
   }
 
   Future<void> _submit() async {
-    if (_trx.text.isEmpty) {
+    if (_trx.text.trim().length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-content: Text('TrxID দিন',
+content: Text('সঠিক TrxID দিন (কমপক্ষে ৬ অক্ষর)',
     style: GoogleFonts.hindSiliguri(height: 1.5)),
         ),
       );
@@ -125,7 +125,7 @@ content: Text('TrxID দিন',
     setState(() => _loading = true);
     try {
       await AuthService.submitPayment(
-        trxId: _trx.text.trim(),
+        trxId: _trx.text.trim().toUpperCase(),
         amount: _totalAmount,
         method: 'bKash',
       );

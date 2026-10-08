@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'num_utils.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
@@ -24,21 +25,32 @@ class AuthService {
       email: email,
       password: password,
     );
-    await _db.collection('users').doc(cred.user!.uid).set({
-      'name': name,
-      'phone': phone,
-      'email': email,
-      'address': address,
-      'package': packageName,
-      'packagePrice': packagePrice,
-      'status': 'active',
-      'dueAmount': packagePrice,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      await _db.collection('users').doc(cred.user!.uid).set({
+        'name': name,
+        'phone': phone,
+        'email': email,
+        'address': address,
+        'package': packageName,
+        'packagePrice': packagePrice,
+        'status': 'active',
+        'dueAmount': packagePrice,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // ইউজার ডকুমেন্ট না হলে অ্যাকাউন্টটা ঝুলে থাকবে — তাই মুছে দিচ্ছি
+      try {
+        await cred.user!.delete();
+      } catch (_) {}
+      rethrow;
+    }
     return cred;
   }
 
   static Future<void> signOut() => _auth.signOut();
+
+  static Future<void> sendPasswordReset(String email) =>
+      _auth.sendPasswordResetEmail(email: email.trim());
 
   static Future<Map<String, dynamic>?> getUserData() async {
     final user = currentUser;
@@ -96,8 +108,8 @@ class AuthService {
         return <String, dynamic>{
           'id': d.id,
           'name': (m['name'] ?? '').toString(),
-          'price': (m['price'] ?? 0) as int,
-          'order': (m['order'] ?? 0) as int,
+          'price': asInt(m['price']),
+          'order': asInt(m['order']),
         };
       }).toList();
       list.sort((a, b) => (a['order'] as int).compareTo(b['order'] as int));

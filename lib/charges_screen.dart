@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import 'services.dart';
 import 'theme.dart';
+import 'num_utils.dart';
 
 class ChargesScreen extends StatefulWidget {
   const ChargesScreen({super.key});
@@ -47,7 +48,7 @@ class _ChargesScreenState extends State<ChargesScreen> {
         final m = d.data();
         return <String, dynamic>{
           'period': (m['period'] ?? '').toString(),
-          'charge': (m['charge'] ?? 0) as int,
+          'charge': asInt(m['charge']),
         };
       }).toList();
       chs.sort((a, b) =>
@@ -56,7 +57,7 @@ class _ChargesScreenState extends State<ChargesScreen> {
       final pays = results[1].docs.map((d) {
         final m = d.data();
         return <String, dynamic>{
-          'amount': (m['amount'] ?? 0) as int,
+          'amount': asInt(m['amount']),
           'status': (m['status'] ?? 'pending').toString(),
           'trxId': (m['trxId'] ?? '').toString(),
           'method': (m['method'] ?? 'bKash').toString(),

@@ -36,6 +36,9 @@ flutter:
   assets:
     - assets/logo/jajnet-logo.png
     - assets/fonts/SolaimanLipi.ttf
+    - assets/fonts/HindSiliguri-Regular.ttf
+    - assets/fonts/HindSiliguri-SemiBold.ttf
+    - assets/fonts/HindSiliguri-Bold.ttf
   shaders:
     - shaders/water.frag
 

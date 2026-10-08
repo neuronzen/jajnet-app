@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email in [
+          'admin@jajnet.com',
+          'jibonahmmedniloy@gmail.com'
+        ];
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // suspended / deleted কাস্টমার নতুন পেমেন্ট জমা দিতে পারবে না
+    function isActiveCustomer() {
+      return isSignedIn() &&
+        !(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status
+          in ['suspended', 'deleted']);
+    }
+
+    match /users/{uid} {
+      allow read: if isSelf(uid) || isAdmin();
+
+      // অ্যাডমিন যেকোনো কাস্টমার তৈরি করতে পারবে (Add Customer ঠিক হবে)।
+      // কাস্টমার নিজে সাইনআপ করলে শুধু অ্যাপ যে ৯টা ফিল্ড পাঠায় সেগুলো,
+      // আর দামের হিসাব ঠিক থাকতে হবে।
+      allow create: if isAdmin()
+        || (isSelf(uid)
+            && request.resource.data.keys().hasAll([
+                 'name', 'phone', 'email', 'address',
+                 'package', 'packagePrice', 'status',
+                 'dueAmount', 'createdAt'
+               ])
+            && request.resource.data.keys().hasOnly([
+                 'name', 'phone', 'email', 'address',
+                 'package', 'packagePrice', 'status',
+                 'dueAmount', 'createdAt'
+               ])
+            && request.resource.data.status == 'active'
+            && request.resource.data.packagePrice is int
+            && request.resource.data.packagePrice >= 400
+            && request.resource.data.packagePrice <= 5000
+            && request.resource.data.dueAmount == request.resource.data.packagePrice
+            && request.resource.data.createdAt == request.time);
+
+      allow update: if isAdmin()
+        || (isSelf(uid)
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['name', 'phone', 'address', 'fcmToken', 'fcmUpdatedAt']));
+
+      allow delete: if isAdmin();
+    }
+
+    match /payments/{payId} {
+      allow read: if isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn()
+        && isActiveCustomer()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.amount <= 100000
+        && request.resource.data.trxId is string
+        && request.resource.data.trxId.size() >= 6
+        && request.resource.data.trxId.size() <= 30
+        // ভেরিফাই-সংক্রান্ত ফিল্ড কাস্টমার আগে থেকে বসাতে পারবে না
+        && !('verifiedBy' in request.resource.data)
+        && !('verifiedAt' in request.resource.data)
+        && !('dueAfter' in request.resource.data);
+
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /notices/{noticeId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /packages/{pkgId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /billingRecords/{recordId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    match /counters/{counterId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

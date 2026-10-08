@@ -12,6 +12,7 @@ import 'screens.dart';
 import 'services.dart';
 import 'speed_test.dart';
 import 'theme.dart';
+import 'num_utils.dart';
 
 class DashboardHome extends StatefulWidget {
   const DashboardHome({super.key});
@@ -87,7 +88,7 @@ class _DashboardHomeState extends State<DashboardHome> {
       final billingSnap = results[3] as QuerySnapshot;
       if (billingSnap.docs.isNotEmpty) {
         final bm = billingSnap.docs.first.data() as Map<String, dynamic>;
-        currentMonthCharge = (bm['charge'] ?? 0) as int;
+        currentMonthCharge = asInt(bm['charge']);
       }
 
       if (!mounted) return;
@@ -303,7 +304,10 @@ child: Column(
                               color: Colors.white,
                               height: 1.4)),
                       const SizedBox(height: 2),
-                      Text('আপনার কোনো বকেয়া নেই',
+                      Text(
+                          due < 0
+                              ? 'অগ্রিম জমা আছে: ৳ ${NumberFormat('#,##0').format(-due)}'
+                              : 'আপনার কোনো বকেয়া নেই',
                           style: GoogleFonts.hindSiliguri(
                               fontSize: 12.5,
                               color: Colors.white.withOpacity(0.92),
@@ -682,9 +686,7 @@ children: [
                       payment: p,
                       user: _user ?? {},
                       months: 1,
-                      monthlyPrice: (_user?[
-                                  'packagePrice'] ??
-                              525) as int,
+                      monthlyPrice: asInt(_user?['packagePrice'], 525),
                       monthRange: (p['createdAt']
                               is Timestamp)
                           ? DateFormat('dd MMMM yyyy').format(
@@ -804,7 +806,7 @@ return GestureDetector(
         user: _user ?? {},
         months: 1,
         monthlyPrice:
-            (_user?['packagePrice'] ?? 525) as int,
+            asInt(_user?['packagePrice'], 525),
         monthRange: (p['createdAt'] is Timestamp)
             ? DateFormat('dd MMMM yyyy').format(
                 (p['createdAt'] as Timestamp).toDate())
